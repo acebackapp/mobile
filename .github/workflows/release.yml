@@ -12,7 +12,10 @@ permissions: read-all
 jobs:
   release:
     uses: "Mosher-Labs/.github/.github/workflows/release.yml@main"
-    secrets: inherit
+    secrets:
+      HEIMDALLR_TOKEN: ${{ secrets.HEIMDALLR_TOKEN }}
+      SLACK_BOT_USER_OAUTH_ACCESS_TOKEN: ${{ secrets.SLACK_BOT_USER_OAUTH_ACCESS_TOKEN }}
+      SLACK_PLATFORM_NOTIFICATIONS_CHANNEL_ID: ${{ secrets.SLACK_PLATFORM_NOTIFICATIONS_CHANNEL_ID }}
     permissions:
       contents: write
       issues: write
