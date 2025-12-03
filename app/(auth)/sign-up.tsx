@@ -14,13 +14,14 @@ import {
 import { Link, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { validateSignUpForm } from '@/lib/validation';
 import Colors from '@/constants/Colors';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function SignUp() {
+  const { signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -44,10 +45,7 @@ export default function SignUp() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-      });
+      const { error } = await signUp(email.trim(), password);
 
       if (error) {
         Alert.alert('Sign Up Error', error.message);
