@@ -37,16 +37,16 @@ Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
    **For Expo Go (Development):**
 
    ```text
-   https://auth.expo.io/@your-expo-username/discr-mobile-temp
+   https://auth.expo.io/@benniemosher-discr/discr
    ```
 
-   Replace `your-expo-username` with your Expo account username.
-
-   **For Production (Standalone App):**
+   **For Production (React Native/Expo):**
 
    ```text
-   com.discr.app:/oauthredirect
+   https://xhaogdigrsiwxdjmjzgx.supabase.co/auth/v1/callback
    ```
+
+   This is your Supabase OAuth callback URL. After Google authenticates, it redirects to Supabase, which then redirects back to your app using the custom scheme `com.discr.app://`.
 
 1. Click "Save"
 

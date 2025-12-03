@@ -11,8 +11,12 @@ import {
   Platform,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '@/lib/supabase';
 import { validateSignInForm } from '@/lib/validation';
+import Colors from '@/constants/Colors';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -55,12 +59,28 @@ export default function SignIn() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+          redirectTo: 'com.discr.app://',
+          skipBrowserRedirect: false,
+        },
       });
 
       if (error) {
         Alert.alert('Google Sign In Error', error.message);
+        return;
+      }
+
+      if (data?.url) {
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          'com.discr.app://'
+        );
+
+        if (result.type === 'success') {
+          router.replace('/(tabs)');
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred');
@@ -75,6 +95,11 @@ export default function SignIn() {
       style={styles.container}
     >
       <View style={styles.content}>
+        <View style={styles.logoContainer}>
+          <Text style={styles.logo}>Discr</Text>
+          <Text style={styles.logoSubtext}>Discretion. Simplified.</Text>
+        </View>
+
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Sign in to continue</Text>
 
@@ -170,6 +195,22 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: 'center',
   },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  logo: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: Colors.violet.primary,
+    letterSpacing: -1,
+  },
+  logoSubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
@@ -208,7 +249,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   button: {
-    backgroundColor: '#000',
+    backgroundColor: Colors.violet.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -261,7 +302,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   link: {
-    color: '#000',
+    color: Colors.violet.primary,
     fontSize: 14,
     fontWeight: '600',
   },
