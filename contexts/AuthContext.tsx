@@ -41,21 +41,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Handle deep link OAuth callbacks
     const handleDeepLink = async (event: { url: string }) => {
-      if (event.url && event.url.includes('#access_token')) {
-        // Extract session from OAuth callback URL
-        const url = new URL(event.url);
-        const accessToken = url.hash.match(/access_token=([^&]+)/)?.[1];
-        const refreshToken = url.hash.match(/refresh_token=([^&]+)/)?.[1];
+      console.log('Deep link received:', event.url);
 
-        if (accessToken && refreshToken) {
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
+      if (event.url && (event.url.includes('#access_token') || event.url.includes('?access_token'))) {
+        try {
+          // Parse the URL to extract tokens
+          const urlObj = new URL(event.url.replace('#', '?'));
+          const params = new URLSearchParams(urlObj.search);
+
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+
+          console.log('Tokens found:', {
+            hasAccess: !!accessToken,
+            hasRefresh: !!refreshToken
           });
 
-          if (error) {
-            console.error('OAuth error:', error);
+          if (accessToken && refreshToken) {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+
+            if (error) {
+              console.error('OAuth error:', error);
+            } else {
+              console.log('Session set successfully');
+            }
           }
+        } catch (err) {
+          console.error('Error parsing deep link:', err);
         }
       }
     };
