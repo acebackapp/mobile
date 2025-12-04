@@ -173,10 +173,11 @@ const styles = StyleSheet.create({
   },
   section: {
     width: '100%',
-    backgroundColor: '#f5f5f5',
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(150, 150, 150, 0.2)',
   },
   sectionTitle: {
     fontSize: 12,
