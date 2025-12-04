@@ -88,7 +88,7 @@ export default function AddDiscScreen() {
         weight: weight ? parseInt(weight, 10) : undefined,
         color: color.trim() || undefined,
         flight_numbers: flightNumbers,
-        reward_amount: rewardAmount ? parseInt(rewardAmount, 10) : undefined,
+        reward_amount: rewardAmount ? Math.round(parseFloat(rewardAmount) * 100) : undefined, // Convert dollars to cents
         notes: notes.trim() || undefined,
       };
 
@@ -265,15 +265,27 @@ export default function AddDiscScreen() {
 
           {/* Reward Amount */}
           <View style={styles.field}>
-            <Text style={styles.label}>Reward Amount ($)</Text>
-            <TextInput
-              style={styles.input}
-              value={rewardAmount}
-              onChangeText={setRewardAmount}
-              placeholder="e.g., 10"
-              placeholderTextColor="#999"
-              keyboardType="numeric"
-            />
+            <Text style={styles.label}>Reward Amount</Text>
+            <View style={styles.inputWithPrefix}>
+              <Text style={styles.inputPrefix}>$</Text>
+              <TextInput
+                style={[styles.input, styles.inputWithPrefixText]}
+                value={rewardAmount}
+                onChangeText={(text) => {
+                  // Only allow numbers and decimal point
+                  const cleaned = text.replace(/[^0-9.]/g, '');
+                  // Only allow one decimal point
+                  const parts = cleaned.split('.');
+                  if (parts.length > 2) return;
+                  // Limit to 2 decimal places
+                  if (parts[1] && parts[1].length > 2) return;
+                  setRewardAmount(cleaned);
+                }}
+                placeholder="0.00"
+                placeholderTextColor="#999"
+                keyboardType="decimal-pad"
+              />
+            </View>
           </View>
 
           {/* Notes */}
@@ -369,6 +381,24 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: '#ff4444',
+  },
+  inputWithPrefix: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+  },
+  inputPrefix: {
+    fontSize: 16,
+    fontWeight: '600',
+    paddingLeft: 12,
+    color: '#666',
+  },
+  inputWithPrefixText: {
+    flex: 1,
+    borderWidth: 0,
+    paddingLeft: 4,
   },
   textArea: {
     minHeight: 100,
