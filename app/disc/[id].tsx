@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import {
   StyleSheet,
   ScrollView,
@@ -8,7 +8,7 @@ import {
   Image,
   View as RNView,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation, useFocusEffect } from 'expo-router';
 import { Text, View } from '@/components/Themed';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Colors from '@/constants/Colors';
@@ -90,9 +90,11 @@ export default function DiscDetailScreen() {
     }
   }, [disc, navigation]);
 
-  useEffect(() => {
-    fetchDiscDetail();
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchDiscDetail();
+    }, [id])
+  );
 
   const fetchDiscDetail = async () => {
     try {
