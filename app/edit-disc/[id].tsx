@@ -93,6 +93,7 @@ export default function EditDiscScreen() {
   }, [id]);
 
   const fetchDiscData = async () => {
+    console.log('fetchDiscData called for disc:', id);
     try {
       setLoading(true);
 
@@ -130,30 +131,48 @@ export default function EditDiscScreen() {
       }
 
       // Populate form fields
-      setManufacturer(disc.manufacturer || '');
-      setMold(disc.mold || '');
-      setPlastic(disc.plastic || '');
-      setWeight(disc.weight ? disc.weight.toString() : '');
-      setColor(disc.color || '');
-      setSpeed(
-        disc.flight_numbers.speed !== null ? disc.flight_numbers.speed.toString() : ''
-      );
-      setGlide(
-        disc.flight_numbers.glide !== null ? disc.flight_numbers.glide.toString() : ''
-      );
-      setTurn(disc.flight_numbers.turn !== null ? disc.flight_numbers.turn.toString() : '');
-      setFade(disc.flight_numbers.fade !== null ? disc.flight_numbers.fade.toString() : '');
-      // reward_amount comes as string like "5.00" from API
-      setRewardAmount(disc.reward_amount ? disc.reward_amount.toString() : '');
-      setNotes(disc.notes || '');
-      // Photos
-      setExistingPhotos(Array.isArray(disc.photos) ? disc.photos : []);
+      const manufacturerValue = disc.manufacturer || '';
+      const moldValue = disc.mold || '';
+      const plasticValue = disc.plastic || '';
+      const weightValue = disc.weight ? disc.weight.toString() : '';
+      const colorValue = disc.color || '';
+      const speedValue = disc.flight_numbers.speed !== null ? disc.flight_numbers.speed.toString() : '';
+      const glideValue = disc.flight_numbers.glide !== null ? disc.flight_numbers.glide.toString() : '';
+      const turnValue = disc.flight_numbers.turn !== null ? disc.flight_numbers.turn.toString() : '';
+      const fadeValue = disc.flight_numbers.fade !== null ? disc.flight_numbers.fade.toString() : '';
+      const rewardAmountValue = disc.reward_amount ? disc.reward_amount.toString() : '';
+      const notesValue = disc.notes || '';
+      const photosValue = Array.isArray(disc.photos) ? disc.photos : [];
 
-      console.log('Disc data loaded:', {
-        id: disc.id,
-        mold: disc.mold,
-        photoCount: Array.isArray(disc.photos) ? disc.photos.length : 0,
+      console.log('Setting form values:', {
+        manufacturer: manufacturerValue,
+        mold: moldValue,
+        plastic: plasticValue,
+        weight: weightValue,
+        color: colorValue,
+        speed: speedValue,
+        glide: glideValue,
+        turn: turnValue,
+        fade: fadeValue,
+        rewardAmount: rewardAmountValue,
+        notes: notesValue,
+        photoCount: photosValue.length,
       });
+
+      setManufacturer(manufacturerValue);
+      setMold(moldValue);
+      setPlastic(plasticValue);
+      setWeight(weightValue);
+      setColor(colorValue);
+      setSpeed(speedValue);
+      setGlide(glideValue);
+      setTurn(turnValue);
+      setFade(fadeValue);
+      setRewardAmount(rewardAmountValue);
+      setNotes(notesValue);
+      setExistingPhotos(photosValue);
+
+      console.log('Disc data loaded successfully');
     } catch (error) {
       console.error('Error fetching disc:', error);
       Alert.alert('Error', 'Failed to load disc data. Please try again.');
