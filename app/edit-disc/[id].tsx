@@ -391,34 +391,12 @@ export default function EditDiscScreen() {
       if (newPhotos.length > 0) {
         console.log(`Uploading ${newPhotos.length} new photos for disc ${id}`);
 
-        // Determine which photo slots are available
-        // Extract the photo numbers from existing photos
-        const usedSlots = new Set(
-          existingPhotos.map((p) => {
-            const match = p.photo_type.match(/photo-(\d+)/);
-            return match ? parseInt(match[1], 10) : 0;
-          })
-        );
-
-        // Find available slots
-        const availableSlots: number[] = [];
-        for (let i = 1; i <= 4; i++) {
-          if (!usedSlots.has(i)) {
-            availableSlots.push(i);
-          }
-        }
-
         for (let i = 0; i < newPhotos.length; i++) {
           const photoUri = newPhotos[i];
-          const photoNumber = availableSlots[i];
-          const photoType = `photo-${photoNumber}`;
-
-          console.log(`Uploading photo to slot ${photoNumber}`);
 
           try {
             const formData = new FormData();
             formData.append('disc_id', id);
-            formData.append('photo_type', photoType);
 
             const uriParts = photoUri.split('.');
             const fileType = uriParts[uriParts.length - 1];

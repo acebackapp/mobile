@@ -214,13 +214,11 @@ export default function AddDiscScreen() {
 
         for (let i = 0; i < photos.length; i++) {
           const photoUri = photos[i];
-          const photoType = `photo-${i + 1}`; // photo-1, photo-2, photo-3, photo-4
 
           try {
             // Create FormData for photo upload
             const formData = new FormData();
             formData.append('disc_id', data.id);
-            formData.append('photo_type', photoType);
 
             // Get file extension from URI
             const uriParts = photoUri.split('.');
