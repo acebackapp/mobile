@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StyleSheet, View, TouchableOpacity, Text, Modal, Dimensions } from 'react-native';
 import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { Image } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Colors from '@/constants/Colors';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CIRCLE_SIZE = Math.min(SCREEN_WIDTH * 0.7, 280);
+const IMAGE_CONTAINER_SIZE = SCREEN_WIDTH;
 
 interface ImageCropperWithCircleProps {
   visible: boolean;
@@ -23,6 +25,23 @@ export default function ImageCropperWithCircle({
   onCropComplete,
 }: ImageCropperWithCircleProps) {
   const [processing, setProcessing] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+
+  // Get image dimensions when URI changes
+  useEffect(() => {
+    if (imageUri) {
+      Image.getSize(imageUri, (width, height) => {
+        setImageDimensions({ width, height });
+        // Reset transforms when new image loads
+        scale.value = 1;
+        savedScale.value = 1;
+        translateX.value = 0;
+        translateY.value = 0;
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      });
+    }
+  }, [imageUri]);
 
   // Gesture values
   const scale = useSharedValue(1);
@@ -67,10 +86,64 @@ export default function ImageCropperWithCircle({
   const handleCrop = async () => {
     setProcessing(true);
     try {
-      // Crop to square (1:1 aspect ratio)
+      const { width: imgWidth, height: imgHeight } = imageDimensions;
+      if (!imgWidth || !imgHeight) {
+        console.error('Image dimensions not available');
+        return;
+      }
+
+      // Calculate the scale factor between display size and actual image size
+      const displaySize = IMAGE_CONTAINER_SIZE;
+      const imageAspect = imgWidth / imgHeight;
+      let displayWidth, displayHeight;
+
+      if (imageAspect > 1) {
+        // Landscape
+        displayHeight = displaySize;
+        displayWidth = displaySize * imageAspect;
+      } else {
+        // Portrait or square
+        displayWidth = displaySize;
+        displayHeight = displaySize / imageAspect;
+      }
+
+      const scaleFactorX = imgWidth / displayWidth;
+      const scaleFactorY = imgHeight / displayHeight;
+
+      // Calculate the circle position in the displayed image
+      const circleRadiusDisplay = CIRCLE_SIZE / 2;
+      const centerX = displaySize / 2;
+      const centerY = displaySize / 2;
+
+      // Account for user's pan and zoom
+      const userScale = savedScale.value;
+      const userTranslateX = savedTranslateX.value;
+      const userTranslateY = savedTranslateY.value;
+
+      // Calculate crop region in original image coordinates
+      const cropSize = (CIRCLE_SIZE / userScale) * scaleFactorX;
+      const cropX = ((centerX - userTranslateX) / userScale - circleRadiusDisplay) * scaleFactorX;
+      const cropY = ((centerY - userTranslateY) / userScale - circleRadiusDisplay) * scaleFactorY;
+
+      // Ensure crop region is within image bounds
+      const finalCropX = Math.max(0, Math.min(cropX, imgWidth - cropSize));
+      const finalCropY = Math.max(0, Math.min(cropY, imgHeight - cropSize));
+      const finalCropSize = Math.min(cropSize, imgWidth - finalCropX, imgHeight - finalCropY);
+
+      // Crop to the circular region and resize to standard size
       const manipResult = await manipulateAsync(
         imageUri,
-        [{ resize: { width: 1000, height: 1000 } }],
+        [
+          {
+            crop: {
+              originX: finalCropX,
+              originY: finalCropY,
+              width: finalCropSize,
+              height: finalCropSize,
+            },
+          },
+          { resize: { width: 800, height: 800 } },
+        ],
         { compress: 0.8, format: SaveFormat.JPEG }
       );
 
@@ -142,8 +215,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   image: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH,
+    width: IMAGE_CONTAINER_SIZE,
+    height: IMAGE_CONTAINER_SIZE,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

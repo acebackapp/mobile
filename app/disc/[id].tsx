@@ -232,17 +232,21 @@ export default function DiscDetailScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {/* Photo Gallery */}
+      {/* Photo Gallery - Circular Display */}
       {validPhotos.length > 0 ? (
-        <ScrollView
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          style={styles.photoGallery}>
-          {validPhotos.map((photo) => (
-            <Image key={photo.id} source={{ uri: photo.photo_url }} style={styles.photo} />
-          ))}
-        </ScrollView>
+        <View style={styles.photoGalleryContainer}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.photoGallery}>
+            {validPhotos.map((photo) => (
+              <View key={photo.id} style={styles.photoWrapper}>
+                <Image source={{ uri: photo.photo_url }} style={styles.photo} />
+              </View>
+            ))}
+          </ScrollView>
+        </View>
       ) : (
         <View style={styles.photoPlaceholder}>
           <FontAwesome name="circle-o" size={64} color="#ccc" />
@@ -413,12 +417,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  photoGalleryContainer: {
+    height: 320,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
   photoGallery: {
-    height: 300,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  photoWrapper: {
+    width: 280,
+    height: 280,
+    marginHorizontal: 10,
+    borderRadius: 140,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
   },
   photo: {
-    width: 375, // Standard phone width
-    height: 300,
+    width: 280,
+    height: 280,
     resizeMode: 'cover',
   },
   photoPlaceholder: {
