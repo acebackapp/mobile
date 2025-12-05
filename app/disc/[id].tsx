@@ -243,7 +243,7 @@ export default function DiscDetailScreen() {
         <View style={styles.photoIndicator}>
           <FontAwesome name="camera" size={12} color="#666" />
           <Text style={styles.photoIndicatorText}>
-            Swipe to see all {disc.photos.length} photos
+            Swipe to see photos
           </Text>
         </View>
       )}

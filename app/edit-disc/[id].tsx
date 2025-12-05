@@ -83,6 +83,7 @@ export default function EditDiscScreen() {
   // Photos
   const [existingPhotos, setExistingPhotos] = useState<DiscPhoto[]>([]);
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
+  const [photosToDelete, setPhotosToDelete] = useState<string[]>([]); // IDs of existing photos to delete
 
   // Validation errors
   const [moldError, setMoldError] = useState('');
@@ -226,6 +227,11 @@ export default function EditDiscScreen() {
 
   const removeNewPhoto = (index: number) => {
     setNewPhotos(newPhotos.filter((_, i) => i !== index));
+  };
+
+  const removeExistingPhoto = (photoId: string) => {
+    setPhotosToDelete([...photosToDelete, photoId]);
+    setExistingPhotos(existingPhotos.filter((p) => p.id !== photoId));
   };
 
   const showPhotoOptions = () => {
@@ -570,9 +576,11 @@ export default function EditDiscScreen() {
               {existingPhotos.map((photo) => (
                 <View key={photo.id} style={styles.photoContainer}>
                   <Image source={{ uri: photo.photo_url }} style={styles.photoImage} />
-                  <View style={styles.existingPhotoBadge}>
-                    <Text style={styles.existingPhotoBadgeText}>Saved</Text>
-                  </View>
+                  <Pressable
+                    style={styles.photoRemoveButton}
+                    onPress={() => removeExistingPhoto(photo.id)}>
+                    <FontAwesome name="times-circle" size={24} color="#ff4444" />
+                  </Pressable>
                 </View>
               ))}
               {/* New photos */}
