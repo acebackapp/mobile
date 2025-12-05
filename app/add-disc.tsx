@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Text, View } from '@/components/Themed';
+import { useColorScheme } from '@/components/useColorScheme';
 import { supabase } from '@/lib/supabase';
 import Colors from '@/constants/Colors';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -26,6 +27,8 @@ interface FlightNumbers {
 
 export default function AddDiscScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const textColor = Colors[colorScheme ?? 'light'].text;
   const [loading, setLoading] = useState(false);
 
   // Predefined color options
@@ -292,6 +295,7 @@ export default function AddDiscScreen() {
               }}
               placeholder="e.g., Destroyer"
               placeholderTextColor="#999"
+              color={textColor}
             />
             {moldError ? <Text style={styles.errorText}>{moldError}</Text> : null}
           </View>
@@ -305,6 +309,7 @@ export default function AddDiscScreen() {
               onChangeText={setManufacturer}
               placeholder="e.g., Innova"
               placeholderTextColor="#999"
+              color={textColor}
             />
           </View>
 
@@ -317,6 +322,7 @@ export default function AddDiscScreen() {
               onChangeText={setPlastic}
               placeholder="e.g., Star"
               placeholderTextColor="#999"
+              color={textColor}
             />
           </View>
 
@@ -330,6 +336,7 @@ export default function AddDiscScreen() {
               placeholder="e.g., 175"
               placeholderTextColor="#999"
               keyboardType="numeric"
+              color={textColor}
             />
           </View>
 
@@ -379,6 +386,7 @@ export default function AddDiscScreen() {
                 placeholder="1-15"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
+                color={textColor}
               />
             </View>
             <View style={styles.fieldSmall}>
@@ -390,6 +398,7 @@ export default function AddDiscScreen() {
                 placeholder="1-7"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
+                color={textColor}
               />
             </View>
           </View>
@@ -404,6 +413,7 @@ export default function AddDiscScreen() {
                 placeholder="-5 to 1"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
+                color={textColor}
               />
             </View>
             <View style={styles.fieldSmall}>
@@ -415,6 +425,7 @@ export default function AddDiscScreen() {
                 placeholder="0-5"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
+                color={textColor}
               />
             </View>
           </View>
@@ -440,6 +451,7 @@ export default function AddDiscScreen() {
                 placeholder="0.00"
                 placeholderTextColor="#999"
                 keyboardType="decimal-pad"
+                color={textColor}
               />
             </View>
           </View>
@@ -456,6 +468,7 @@ export default function AddDiscScreen() {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              color={textColor}
             />
           </View>
 
