@@ -875,11 +875,12 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: 100,
     height: 100,
+    borderRadius: 50,
+    overflow: 'hidden',
   },
   photoImage: {
     width: 100,
     height: 100,
-    borderRadius: 8,
   },
   photoRemoveButton: {
     position: 'absolute',
