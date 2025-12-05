@@ -8,11 +8,14 @@ import {
   Alert,
   ActivityIndicator,
   Pressable,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { Text, View } from '@/components/Themed';
 import { supabase } from '@/lib/supabase';
 import Colors from '@/constants/Colors';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 interface FlightNumbers {
   speed: number | null;
@@ -53,6 +56,9 @@ export default function AddDiscScreen() {
   const [rewardAmount, setRewardAmount] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Photos (up to 4)
+  const [photos, setPhotos] = useState<string[]>([]);
+
   // Validation errors
   const [moldError, setMoldError] = useState('');
 
@@ -68,6 +74,69 @@ export default function AddDiscScreen() {
     }
 
     return isValid;
+  };
+
+  const pickImage = async () => {
+    if (photos.length >= 4) {
+      Alert.alert('Maximum photos', 'You can only add up to 4 photos per disc');
+      return;
+    }
+
+    // Request permissions
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission denied', 'We need camera roll permissions to add photos');
+      return;
+    }
+
+    // Launch image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotos([...photos, result.assets[0].uri]);
+    }
+  };
+
+  const takePhoto = async () => {
+    if (photos.length >= 4) {
+      Alert.alert('Maximum photos', 'You can only add up to 4 photos per disc');
+      return;
+    }
+
+    // Request permissions
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission denied', 'We need camera permissions to take photos');
+      return;
+    }
+
+    // Launch camera
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotos([...photos, result.assets[0].uri]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(photos.filter((_, i) => i !== index));
+  };
+
+  const showPhotoOptions = () => {
+    Alert.alert('Add Photo', 'Choose an option', [
+      { text: 'Take Photo', onPress: takePhoto },
+      { text: 'Choose from Library', onPress: pickImage },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const handleSave = async () => {
@@ -134,6 +203,56 @@ export default function AddDiscScreen() {
           [{ text: 'OK' }]
         );
         throw new Error(data.error || data.details || 'Failed to create disc');
+      }
+
+      // Upload photos if any
+      if (photos.length > 0) {
+        console.log(`Uploading ${photos.length} photos for disc ${data.id}`);
+
+        for (let i = 0; i < photos.length; i++) {
+          const photoUri = photos[i];
+          const photoType = `photo-${i + 1}`; // photo-1, photo-2, photo-3, photo-4
+
+          try {
+            // Create FormData for photo upload
+            const formData = new FormData();
+            formData.append('disc_id', data.id);
+            formData.append('photo_type', photoType);
+
+            // Get file extension from URI
+            const uriParts = photoUri.split('.');
+            const fileType = uriParts[uriParts.length - 1];
+
+            // Create file object for FormData
+            formData.append('file', {
+              uri: photoUri,
+              type: `image/${fileType}`,
+              name: `disc-photo.${fileType}`,
+            } as any);
+
+            const photoResponse = await fetch(
+              `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/upload-disc-photo`,
+              {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: formData,
+              }
+            );
+
+            if (!photoResponse.ok) {
+              const photoError = await photoResponse.json();
+              console.error(`Failed to upload photo ${i + 1}:`, photoError);
+              // Continue with other photos even if one fails
+            } else {
+              console.log(`✅ Photo ${i + 1} uploaded successfully`);
+            }
+          } catch (photoError) {
+            console.error(`Error uploading photo ${i + 1}:`, photoError);
+            // Continue with other photos even if one fails
+          }
+        }
       }
 
       Alert.alert('Success', 'Disc added to your bag!', [
@@ -340,6 +459,30 @@ export default function AddDiscScreen() {
             />
           </View>
 
+          {/* Photos */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Photos (Optional)</Text>
+            <View style={styles.photoGrid}>
+              {photos.map((photo, index) => (
+                <View key={index} style={styles.photoContainer}>
+                  <Image source={{ uri: photo }} style={styles.photoImage} />
+                  <Pressable
+                    style={styles.photoRemoveButton}
+                    onPress={() => removePhoto(index)}>
+                    <FontAwesome name="times-circle" size={24} color="#ff4444" />
+                  </Pressable>
+                </View>
+              ))}
+              {photos.length < 4 && (
+                <Pressable style={styles.photoAddButton} onPress={showPhotoOptions}>
+                  <FontAwesome name="camera" size={32} color="#999" />
+                  <Text style={styles.photoAddText}>Add Photo</Text>
+                </Pressable>
+              )}
+            </View>
+            <Text style={styles.photoHint}>You can add up to 4 photos per disc</Text>
+          </View>
+
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <Pressable
@@ -488,6 +631,48 @@ const styles = StyleSheet.create({
     color: '#ff4444',
     fontSize: 14,
     marginTop: 4,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  photoContainer: {
+    position: 'relative',
+    width: 100,
+    height: 100,
+  },
+  photoImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  photoRemoveButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  photoAddButton: {
+    width: 100,
+    height: 100,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoAddText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
+  photoHint: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 8,
   },
   buttonContainer: {
     flexDirection: 'row',
