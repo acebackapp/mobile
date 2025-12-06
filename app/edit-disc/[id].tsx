@@ -30,7 +30,7 @@ interface FlightNumbers {
 interface DiscPhoto {
   id: string;
   storage_path: string;
-  photo_type: string;
+  photo_uuid: string;
   photo_url?: string;
   created_at: string;
 }
