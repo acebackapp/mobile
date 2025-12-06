@@ -30,7 +30,7 @@ interface FlightNumbers {
 interface DiscPhoto {
   id: string;
   storage_path: string;
-  photo_type: string;
+  photo_uuid: string;
   photo_url?: string;
   created_at: string;
 }
@@ -246,7 +246,9 @@ export default function EditDiscScreen() {
   };
 
   const handlePhotoTaken = (uri: string) => {
-    setNewPhotos([...newPhotos, uri]);
+    // Route camera photos through the cropper like library photos
+    setSelectedImageUri(uri);
+    setShowCropper(true);
   };
 
   const removeNewPhoto = (index: number) => {

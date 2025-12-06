@@ -24,7 +24,7 @@ interface FlightNumbers {
 interface DiscPhoto {
   id: string;
   storage_path: string;
-  photo_type: string;
+  photo_uuid: string;
   photo_url?: string;
   created_at: string;
 }
@@ -116,9 +116,8 @@ export default function MyBagScreen() {
   }, []);
 
   const renderDiscCard = ({ item }: { item: Disc }) => {
-    // Get the first photo (prefer 'top' type, otherwise first available)
-    const topPhoto = item.photos.find((p) => p.photo_type === 'top');
-    const firstPhoto = topPhoto || item.photos[0];
+    // Get the first photo
+    const firstPhoto = item.photos[0];
 
     return (
       <Pressable

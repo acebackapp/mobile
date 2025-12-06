@@ -124,7 +124,9 @@ export default function AddDiscScreen() {
   };
 
   const handlePhotoTaken = (uri: string) => {
-    setPhotos([...photos, uri]);
+    // Route camera photos through the cropper like library photos
+    setSelectedImageUri(uri);
+    setShowCropper(true);
   };
 
   const removePhoto = (index: number) => {
