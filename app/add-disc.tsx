@@ -124,7 +124,9 @@ export default function AddDiscScreen() {
   };
 
   const handlePhotoTaken = (uri: string) => {
-    setPhotos([...photos, uri]);
+    // Route camera photos through the cropper like library photos
+    setSelectedImageUri(uri);
+    setShowCropper(true);
   };
 
   const removePhoto = (index: number) => {
@@ -216,6 +218,7 @@ export default function AddDiscScreen() {
             // Create FormData for photo upload
             const formData = new FormData();
             formData.append('disc_id', data.id);
+            formData.append('photo_type', `photo-${i + 1}`);
 
             // Get file extension from URI
             const uriParts = photoUri.split('.');
