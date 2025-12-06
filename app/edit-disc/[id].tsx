@@ -246,7 +246,9 @@ export default function EditDiscScreen() {
   };
 
   const handlePhotoTaken = (uri: string) => {
-    setNewPhotos([...newPhotos, uri]);
+    // Route camera photos through the cropper like library photos
+    setSelectedImageUri(uri);
+    setShowCropper(true);
   };
 
   const removeNewPhoto = (index: number) => {
