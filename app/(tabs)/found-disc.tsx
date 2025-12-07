@@ -90,13 +90,23 @@ export default function FoundDiscScreen() {
     setErrorMessage('');
 
     try {
+      // Get auth token to check if this is user's own disc
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/lookup-qr-code?code=${encodeURIComponent(code.trim())}`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
         }
       );
 
@@ -105,6 +115,13 @@ export default function FoundDiscScreen() {
       if (!data.found) {
         setErrorMessage('No disc found with this QR code. Please check and try again.');
         setScreenState('error');
+        return;
+      }
+
+      // If this is the user's own disc, redirect to disc detail page
+      if (data.is_owner) {
+        resetScreen();
+        router.push(`/disc/${data.disc.id}`);
         return;
       }
 
@@ -125,49 +142,8 @@ export default function FoundDiscScreen() {
     }
   };
 
-  const lookupQrCode = async () => {
-    if (!qrCode.trim()) {
-      Alert.alert('Error', 'Please enter a QR code');
-      return;
-    }
-
-    setScreenState('loading');
-    setErrorMessage('');
-
-    try {
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/lookup-qr-code?code=${encodeURIComponent(qrCode.trim())}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!data.found) {
-        setErrorMessage('No disc found with this QR code. Please check and try again.');
-        setScreenState('error');
-        return;
-      }
-
-      setDiscInfo(data.disc);
-      setHasActiveRecovery(data.has_active_recovery);
-
-      if (data.has_active_recovery) {
-        setErrorMessage('This disc already has an active recovery in progress.');
-        setScreenState('error');
-        return;
-      }
-
-      setScreenState('found');
-    } catch (error) {
-      console.error('Lookup error:', error);
-      setErrorMessage('Failed to look up disc. Please try again.');
-      setScreenState('error');
-    }
+  const lookupQrCode = () => {
+    lookupQrCodeWithValue(qrCode);
   };
 
   const reportFoundDisc = async () => {
