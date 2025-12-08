@@ -19,7 +19,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 
 interface Notification {
   id: string;
-  type: 'disc_found' | 'meetup_proposed' | 'meetup_accepted' | 'meetup_declined' | 'disc_recovered';
+  type: 'disc_found' | 'meetup_proposed' | 'meetup_accepted' | 'meetup_declined' | 'disc_recovered' | 'disc_surrendered';
   title: string;
   body: string;
   data: {
@@ -37,6 +37,7 @@ const NOTIFICATION_ICONS: Record<string, React.ComponentProps<typeof FontAwesome
   meetup_accepted: 'check-circle',
   meetup_declined: 'times-circle',
   disc_recovered: 'trophy',
+  disc_surrendered: 'gift',
 };
 
 const NOTIFICATION_COLORS: Record<string, string> = {
@@ -45,6 +46,7 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   meetup_accepted: '#27AE60',
   meetup_declined: '#E74C3C',
   disc_recovered: '#10b981',
+  disc_surrendered: '#9B59B6',
 };
 
 export default function NotificationsScreen() {
@@ -140,11 +142,11 @@ export default function NotificationsScreen() {
       setUnreadCount((prev) => Math.max(0, prev - 1));
     }
 
-    // Mark as read in backend (so it doesn't come back)
+    // Dismiss in backend (so it doesn't come back)
     if (!session?.access_token) return;
 
     try {
-      await supabase.functions.invoke('mark-notification-read', {
+      await supabase.functions.invoke('dismiss-notification', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -185,21 +187,41 @@ export default function NotificationsScreen() {
 
   const SwipeableNotification = ({ item }: { item: Notification }) => {
     const translateX = useRef(new Animated.Value(0)).current;
+    const isSwipingRef = useRef(false);
     const SWIPE_THRESHOLD = -80;
 
     const panResponder = useRef(
       PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
         onMoveShouldSetPanResponder: (_, gestureState) => {
-          // Only respond to horizontal swipes
-          return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 10;
+          // Only respond to horizontal swipes left
+          const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+          const isSignificant = Math.abs(gestureState.dx) > 10;
+          const isLeftSwipe = gestureState.dx < 0;
+          return isHorizontal && isSignificant && isLeftSwipe;
+        },
+        onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+          // Capture the gesture to prevent FlatList from scrolling
+          const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+          const isSignificant = Math.abs(gestureState.dx) > 15;
+          const isLeftSwipe = gestureState.dx < 0;
+          if (isHorizontal && isSignificant && isLeftSwipe) {
+            isSwipingRef.current = true;
+            return true;
+          }
+          return false;
+        },
+        onPanResponderGrant: () => {
+          isSwipingRef.current = true;
         },
         onPanResponderMove: (_, gestureState) => {
           // Only allow swiping left
           if (gestureState.dx < 0) {
-            translateX.setValue(gestureState.dx);
+            translateX.setValue(Math.max(gestureState.dx, -150));
           }
         },
         onPanResponderRelease: (_, gestureState) => {
+          isSwipingRef.current = false;
           if (gestureState.dx < SWIPE_THRESHOLD) {
             // Swipe to dismiss
             Animated.timing(translateX, {
@@ -214,8 +236,22 @@ export default function NotificationsScreen() {
             Animated.spring(translateX, {
               toValue: 0,
               useNativeDriver: true,
+              friction: 8,
             }).start();
           }
+        },
+        onPanResponderTerminate: () => {
+          // If gesture is terminated (e.g., by scroll), snap back
+          isSwipingRef.current = false;
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 8,
+          }).start();
+        },
+        onPanResponderTerminationRequest: () => {
+          // Don't let other responders take over once we've started swiping
+          return !isSwipingRef.current;
         },
       })
     ).current;
