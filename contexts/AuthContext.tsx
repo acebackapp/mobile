@@ -1,7 +1,19 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
+
+// Configure notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 type AuthContextType = {
   session: Session | null;
@@ -11,6 +23,7 @@ type AuthContextType = {
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  registerPushToken: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,12 +34,80 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => ({ error: null }),
   signInWithGoogle: async () => ({ error: null }),
   signOut: async () => {},
+  registerPushToken: async () => {},
 });
+
+async function registerForPushNotificationsAsync(): Promise<string | null> {
+  let token: string | null = null;
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#3b1877',
+    });
+  }
+
+  if (Device.isDevice) {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      console.log('Failed to get push token - permission not granted');
+      return null;
+    }
+
+    try {
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
+      });
+      token = tokenData.data;
+    } catch (error) {
+      console.error('Error getting push token:', error);
+    }
+  } else {
+    console.log('Push notifications require a physical device');
+  }
+
+  return token;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const registerPushToken = useCallback(async () => {
+    if (!session?.access_token) return;
+
+    try {
+      const token = await registerForPushNotificationsAsync();
+      if (token) {
+        console.log('Registering push token:', token.substring(0, 30) + '...');
+
+        const response = await supabase.functions.invoke('register-push-token', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: { push_token: token },
+        });
+
+        if (response.error) {
+          console.error('Failed to register push token:', response.error);
+        } else {
+          console.log('Push token registered successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error registering push token:', error);
+    }
+  }, [session?.access_token]);
 
   useEffect(() => {
     // Get initial session
@@ -60,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           console.log('Tokens found:', {
             hasAccess: !!accessToken,
-            hasRefresh: !!refreshToken
+            hasRefresh: !!refreshToken,
           });
 
           if (accessToken && refreshToken) {
@@ -94,6 +175,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
       urlSubscription.remove();
+    };
+  }, []);
+
+  // Register push token when session is available
+  useEffect(() => {
+    if (session?.access_token) {
+      registerPushToken();
+    }
+  }, [session?.access_token, registerPushToken]);
+
+  // Set up notification listeners
+  useEffect(() => {
+    // Handle notification received while app is foregrounded
+    const notificationListener = Notifications.addNotificationReceivedListener((notification) => {
+      console.log('Notification received:', notification);
+    });
+
+    // Handle notification response (user tapped on notification)
+    const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log('Notification response:', response);
+      // Navigation to specific screen can be handled here based on notification data
+    });
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener);
+      Notifications.removeNotificationSubscription(responseListener);
     };
   }, []);
 
@@ -135,7 +242,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signInWithGoogle, signOut }}>
+    <AuthContext.Provider
+      value={{ session, user, loading, signIn, signUp, signInWithGoogle, signOut, registerPushToken }}
+    >
       {children}
     </AuthContext.Provider>
   );

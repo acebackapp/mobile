@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text, View } from '@/components/Themed';
+import { Avatar } from '@/components/Avatar';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Colors from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
@@ -51,10 +52,12 @@ interface RecoveryDetails {
   owner: {
     id: string;
     display_name: string;
+    avatar_url?: string | null;
   };
   finder: {
     id: string;
     display_name: string;
+    avatar_url?: string | null;
   };
   meetup_proposals: MeetupProposal[];
 }
@@ -315,16 +318,32 @@ export default function RecoveryDetailScreen() {
       <View style={[styles.section, { borderColor: isDark ? '#444' : '#eee', backgroundColor: isDark ? '#1a1a1a' : '#fff' }]}>
         <Text style={styles.sectionTitle}>People</Text>
         <View style={styles.personRow}>
-          <FontAwesome name="user" size={16} color={Colors.violet.primary} />
-          <Text style={styles.personLabel}>Owner:</Text>
-          <Text style={styles.personName}>{recovery.owner.display_name}</Text>
-          {isOwner && <Text style={styles.youBadge}>(You)</Text>}
+          <Avatar
+            avatarUrl={recovery.owner.avatar_url}
+            name={recovery.owner.display_name}
+            size={36}
+          />
+          <View style={styles.personInfo}>
+            <Text style={styles.personLabel}>Owner</Text>
+            <Text style={styles.personName}>
+              {recovery.owner.display_name}
+              {isOwner && <Text style={styles.youBadge}> (You)</Text>}
+            </Text>
+          </View>
         </View>
         <View style={styles.personRow}>
-          <FontAwesome name="hand-paper-o" size={16} color="#2ECC71" />
-          <Text style={styles.personLabel}>Finder:</Text>
-          <Text style={styles.personName}>{recovery.finder.display_name}</Text>
-          {!isOwner && <Text style={styles.youBadge}>(You)</Text>}
+          <Avatar
+            avatarUrl={recovery.finder.avatar_url}
+            name={recovery.finder.display_name}
+            size={36}
+          />
+          <View style={styles.personInfo}>
+            <Text style={styles.personLabel}>Finder</Text>
+            <Text style={styles.personName}>
+              {recovery.finder.display_name}
+              {!isOwner && <Text style={styles.youBadge}> (You)</Text>}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -428,8 +447,8 @@ export default function RecoveryDetailScreen() {
         </RNView>
       )}
 
-      {/* Finder: Propose Meetup button */}
-      {!isOwner && recovery.status === 'found' && (
+      {/* Propose Meetup button - available to both owner and finder when status is 'found' */}
+      {recovery.status === 'found' && (
         <Pressable
           style={styles.primaryButton}
           onPress={() => router.push(`/propose-meetup/${recoveryId}`)}
@@ -439,7 +458,7 @@ export default function RecoveryDetailScreen() {
         </Pressable>
       )}
 
-      {/* Finder: Waiting for owner */}
+      {/* Finder: Waiting for owner to respond */}
       {!isOwner && pendingProposal && (
         <View style={[styles.section, { borderColor: isDark ? '#444' : '#eee', backgroundColor: isDark ? '#1a1a1a' : '#fff' }]}>
           <View style={styles.waitingRow}>
@@ -586,19 +605,23 @@ const styles = StyleSheet.create({
   personRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: 12,
+    marginBottom: 12,
+  },
+  personInfo: {
+    flex: 1,
   },
   personLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
+    marginBottom: 2,
   },
   personName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '500',
   },
   youBadge: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.violet.primary,
     fontWeight: '600',
   },

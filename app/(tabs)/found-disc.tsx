@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   TextInput,
@@ -10,8 +10,10 @@ import {
   Platform,
   Alert,
   Dimensions,
+  View as RNView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Text, View } from '@/components/Themed';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -95,11 +97,13 @@ export default function FoundDiscScreen() {
   const [loadingPending, setLoadingPending] = useState(true);
   const [loadingMyDiscs, setLoadingMyDiscs] = useState(true);
 
-  // Fetch pending recoveries on mount
-  useEffect(() => {
-    fetchPendingRecoveries();
-    fetchMyDiscsBeingRecovered();
-  }, []);
+  // Fetch pending recoveries when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchPendingRecoveries();
+      fetchMyDiscsBeingRecovered();
+    }, [])
+  );
 
   const fetchPendingRecoveries = async () => {
     try {
@@ -402,34 +406,34 @@ export default function FoundDiscScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* My Discs Being Recovered Section - Show first if owner has active recoveries */}
           {myDiscsBeingRecovered.length > 0 && (
-            <View style={[styles.ownerRecoverySection, { borderColor: isDark ? '#444' : '#F39C12' }]}>
-              <View style={styles.ownerRecoverySectionHeader}>
+            <RNView style={[styles.ownerRecoverySection, { borderColor: isDark ? '#444' : '#F39C12' }]}>
+              <RNView style={styles.ownerRecoverySectionHeader}>
                 <FontAwesome name="bell" size={20} color="#F39C12" />
                 <Text style={styles.ownerRecoverySectionTitle}>Your Discs Were Found!</Text>
-              </View>
+              </RNView>
               <Text style={styles.ownerRecoverySectionSubtitle}>
                 Someone found your disc and is trying to return it
               </Text>
               {myDiscsBeingRecovered.map((recovery) => (
                 <Pressable
                   key={recovery.id}
-                  style={[styles.ownerRecoveryCard, { borderColor: isDark ? '#444' : '#eee' }]}
+                  style={[styles.ownerRecoveryCard, { borderColor: isDark ? '#444' : 'rgba(243, 156, 18, 0.4)' }]}
                   onPress={() => router.push(`/recovery/${recovery.id}`)}>
-                  <View style={styles.ownerRecoveryInfo}>
+                  <RNView style={styles.ownerRecoveryInfo}>
                     <Text style={styles.ownerRecoveryDiscName}>
                       {recovery.disc?.mold || recovery.disc?.name || 'Unknown Disc'}
                     </Text>
                     {recovery.disc?.manufacturer && (
                       <Text style={styles.ownerRecoveryManufacturer}>{recovery.disc.manufacturer}</Text>
                     )}
-                    <View style={[styles.statusBadge, getStatusStyle(recovery.status)]}>
+                    <RNView style={[styles.statusBadge, getStatusStyle(recovery.status)]}>
                       <Text style={styles.statusText}>{formatStatus(recovery.status, true)}</Text>
-                    </View>
-                  </View>
+                    </RNView>
+                  </RNView>
                   <FontAwesome name="chevron-right" size={16} color="#F39C12" />
                 </Pressable>
               ))}
-            </View>
+            </RNView>
           )}
 
           <View style={styles.header}>
@@ -1034,6 +1038,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginBottom: 4,
+    backgroundColor: 'transparent',
   },
   ownerRecoverySectionTitle: {
     fontSize: 18,
@@ -1051,11 +1056,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(243, 156, 18, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(243, 156, 18, 0.4)',
     marginBottom: 8,
   },
   ownerRecoveryInfo: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   ownerRecoveryDiscName: {
     fontSize: 16,
