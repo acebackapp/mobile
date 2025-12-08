@@ -428,8 +428,8 @@ export default function RecoveryDetailScreen() {
         </RNView>
       )}
 
-      {/* Finder: Propose Meetup button */}
-      {!isOwner && recovery.status === 'found' && (
+      {/* Propose Meetup button - available to both owner and finder when status is 'found' */}
+      {recovery.status === 'found' && (
         <Pressable
           style={styles.primaryButton}
           onPress={() => router.push(`/propose-meetup/${recoveryId}`)}
@@ -439,7 +439,7 @@ export default function RecoveryDetailScreen() {
         </Pressable>
       )}
 
-      {/* Finder: Waiting for owner */}
+      {/* Finder: Waiting for owner to respond */}
       {!isOwner && pendingProposal && (
         <View style={[styles.section, { borderColor: isDark ? '#444' : '#eee', backgroundColor: isDark ? '#1a1a1a' : '#fff' }]}>
           <View style={styles.waitingRow}>
