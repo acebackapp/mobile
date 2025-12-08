@@ -347,10 +347,9 @@ export default function RecoveryDetailScreen() {
               <Text style={styles.meetupText}>{formatDate(pendingProposal.proposed_datetime)}</Text>
             </RNView>
             {pendingProposal.message && (
-              <RNView style={styles.notesRow}>
-                <FontAwesome name="sticky-note-o" size={14} color="#666" />
-                <Text style={styles.notesLabel}>Notes:</Text>
-                <Text style={styles.notesText}>{pendingProposal.message}</Text>
+              <RNView style={styles.meetupRow}>
+                <FontAwesome name="sticky-note-o" size={16} color="#666" />
+                <Text style={styles.meetupText}>{pendingProposal.message}</Text>
               </RNView>
             )}
           </RNView>
@@ -397,10 +396,9 @@ export default function RecoveryDetailScreen() {
               <Text style={styles.meetupText}>{formatDate(pendingProposal.proposed_datetime)}</Text>
             </RNView>
             {pendingProposal.message && (
-              <RNView style={styles.notesRow}>
-                <FontAwesome name="sticky-note-o" size={14} color="#666" />
-                <Text style={styles.notesLabel}>Notes:</Text>
-                <Text style={styles.notesText}>{pendingProposal.message}</Text>
+              <RNView style={styles.meetupRow}>
+                <FontAwesome name="sticky-note-o" size={16} color="#666" />
+                <Text style={styles.meetupText}>{pendingProposal.message}</Text>
               </RNView>
             )}
           </RNView>
@@ -429,10 +427,9 @@ export default function RecoveryDetailScreen() {
               <Text style={styles.meetupText}>{formatDate(acceptedProposal.proposed_datetime)}</Text>
             </RNView>
             {acceptedProposal.message && (
-              <RNView style={styles.notesRow}>
-                <FontAwesome name="sticky-note-o" size={14} color="#666" />
-                <Text style={styles.notesLabel}>Notes:</Text>
-                <Text style={styles.notesText}>{acceptedProposal.message}</Text>
+              <RNView style={styles.meetupRow}>
+                <FontAwesome name="sticky-note-o" size={16} color="#666" />
+                <Text style={styles.meetupText}>{acceptedProposal.message}</Text>
               </RNView>
             )}
           </RNView>
@@ -729,22 +726,6 @@ const styles = StyleSheet.create({
   },
   meetupText: {
     fontSize: 15,
-    flex: 1,
-  },
-  notesRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    marginTop: 8,
-  },
-  notesLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  notesText: {
-    fontSize: 14,
-    color: '#666',
     flex: 1,
   },
   directionsButton: {
