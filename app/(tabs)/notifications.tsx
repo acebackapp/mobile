@@ -233,14 +233,17 @@ export default function NotificationsScreen() {
 
         {/* Notification content */}
         <Animated.View
-          style={[{ transform: [{ translateX }] }]}
+          style={[
+            styles.notificationSlider,
+            isDark ? styles.notificationSliderDark : styles.notificationSliderLight,
+            { transform: [{ translateX }] },
+          ]}
           {...panResponder.panHandlers}
         >
           <TouchableOpacity
             style={[
               styles.notificationItem,
               !item.read && styles.unreadNotification,
-              isDark && styles.notificationItemDark,
             ]}
             onPress={() => handleNotificationPress(item)}
             activeOpacity={0.7}
@@ -386,14 +389,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  notificationSlider: {
+    // This wrapper ensures full coverage over the delete background
+  },
+  notificationSliderLight: {
+    backgroundColor: '#fff',
+  },
+  notificationSliderDark: {
+    backgroundColor: '#000',
+  },
   notificationItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 16,
-    backgroundColor: '#fff',
-  },
-  notificationItemDark: {
-    backgroundColor: '#000',
   },
   unreadNotification: {
     backgroundColor: `${Colors.violet.primary}08`,
