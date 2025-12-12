@@ -526,35 +526,37 @@ export default function RecoveryDetailScreen() {
             </RNView>
           )}
 
-          {/* Get Directions button */}
-          <Pressable
-            style={styles.directionsButton}
-            onPress={() => {
-              const url = `https://maps.google.com/?q=${recovery.drop_off!.latitude},${recovery.drop_off!.longitude}`;
-              Linking.openURL(url);
-            }}
-          >
-            <FontAwesome name="location-arrow" size={16} color="#fff" />
-            <Text style={styles.directionsButtonText}>Get Directions to Pickup</Text>
-          </Pressable>
-
-          {/* Mark as Recovered button for owner */}
-          {isOwner && (
+          {/* Action buttons */}
+          <RNView style={styles.dropOffActions}>
             <Pressable
-              style={[styles.primaryButton, { marginTop: 12 }]}
-              onPress={handleCompleteRecovery}
-              disabled={actionLoading}
+              style={styles.directionsButton}
+              onPress={() => {
+                const url = `https://maps.google.com/?q=${recovery.drop_off!.latitude},${recovery.drop_off!.longitude}`;
+                Linking.openURL(url);
+              }}
             >
-              {actionLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <FontAwesome name="check" size={18} color="#fff" />
-                  <Text style={styles.primaryButtonText}>Mark as Recovered</Text>
-                </>
-              )}
+              <FontAwesome name="location-arrow" size={16} color="#fff" />
+              <Text style={styles.directionsButtonText}>Get Directions to Pickup</Text>
             </Pressable>
-          )}
+
+            {/* Mark as Recovered button for owner */}
+            {isOwner && (
+              <Pressable
+                style={styles.primaryButton}
+                onPress={handleCompleteRecovery}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <FontAwesome name="check" size={18} color="#fff" />
+                    <Text style={styles.primaryButtonText}>Mark as Recovered</Text>
+                  </>
+                )}
+              </Pressable>
+            )}
+          </RNView>
         </RNView>
       )}
 
@@ -1230,5 +1232,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#444',
     lineHeight: 20,
+  },
+  dropOffActions: {
+    width: '100%',
+    gap: 12,
+    marginTop: 16,
   },
 });
