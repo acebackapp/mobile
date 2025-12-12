@@ -208,6 +208,8 @@ export default function FoundDiscScreen() {
         return { backgroundColor: '#3498DB' };
       case 'meetup_confirmed':
         return { backgroundColor: '#2ECC71' };
+      case 'dropped_off':
+        return { backgroundColor: '#8b5cf6' };
       default:
         return { backgroundColor: '#95A5A6' };
     }
@@ -221,6 +223,8 @@ export default function FoundDiscScreen() {
         return isOwner ? 'Review meetup' : 'Meetup proposed';
       case 'meetup_confirmed':
         return 'Meetup confirmed';
+      case 'dropped_off':
+        return isOwner ? 'Ready for pickup' : 'Dropped off';
       default:
         return status;
     }
@@ -542,7 +546,7 @@ export default function FoundDiscScreen() {
     }
 
     return (
-      <View style={styles.scannerContainer}>
+      <RNView style={styles.scannerContainer}>
         <CameraView
           style={styles.camera}
           facing="back"
@@ -552,24 +556,24 @@ export default function FoundDiscScreen() {
           }}
           onBarcodeScanned={hasScanned ? undefined : handleBarcodeScan}
         />
-        <View style={styles.scannerOverlay}>
-          <View style={styles.scannerHeader}>
+        <RNView style={styles.scannerOverlay}>
+          <RNView style={styles.scannerHeader}>
             <Text style={styles.scannerTitle}>Scan QR Code</Text>
             <Text style={styles.scannerSubtitle}>
               Point your camera at the QR code on the disc
             </Text>
-          </View>
-          <View style={styles.scannerFrame}>
-            <View style={[styles.cornerBorder, styles.topLeft]} />
-            <View style={[styles.cornerBorder, styles.topRight]} />
-            <View style={[styles.cornerBorder, styles.bottomLeft]} />
-            <View style={[styles.cornerBorder, styles.bottomRight]} />
-          </View>
+          </RNView>
+          <RNView style={styles.scannerFrame}>
+            <RNView style={[styles.cornerBorder, styles.topLeft]} />
+            <RNView style={[styles.cornerBorder, styles.topRight]} />
+            <RNView style={[styles.cornerBorder, styles.bottomLeft]} />
+            <RNView style={[styles.cornerBorder, styles.bottomRight]} />
+          </RNView>
           <Pressable style={styles.cancelScanButton} onPress={() => setScreenState('input')}>
             <Text style={styles.cancelScanText}>Cancel</Text>
           </Pressable>
-        </View>
-      </View>
+        </RNView>
+      </RNView>
     );
   }
 
