@@ -528,7 +528,7 @@ export default function RecoveryDetailScreen() {
 
           {/* Get Directions button */}
           <Pressable
-            style={styles.directionsButton}
+            style={[styles.directionsButton, { marginTop: 16, width: '100%' }]}
             onPress={() => {
               const url = `https://maps.google.com/?q=${recovery.drop_off!.latitude},${recovery.drop_off!.longitude}`;
               Linking.openURL(url);
