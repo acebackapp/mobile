@@ -3,10 +3,16 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { Alert, AppState, AppStateStatus } from 'react-native';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import {
+  checkClipboardForCode,
+  hasCheckedDeferredCode,
+  markDeferredCodeChecked,
+} from '@/lib/deferredLinking';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -68,11 +74,78 @@ function useProtectedRoute(user: any, loading: boolean) {
   }, [user, loading, segments]);
 }
 
+/**
+ * Hook to check for deferred deep link codes from clipboard
+ * Prompts user if a valid code is found after app comes to foreground
+ */
+function useDeferredLinking(user: any, loading: boolean) {
+  const router = useRouter();
+  const appState = useRef(AppState.currentState);
+
+  useEffect(() => {
+    // Only check when user is authenticated and not loading
+    if (loading || !user) return;
+
+    const checkForDeferredCode = async () => {
+      // Don't check more than once per session
+      const alreadyChecked = await hasCheckedDeferredCode();
+      if (alreadyChecked) return;
+
+      const code = await checkClipboardForCode();
+      if (code) {
+        // Mark as checked before showing alert
+        await markDeferredCodeChecked();
+
+        Alert.alert(
+          'Found a Disc Code!',
+          `We found code "${code}" in your clipboard. Would you like to look up this disc?`,
+          [
+            {
+              text: 'No Thanks',
+              style: 'cancel',
+            },
+            {
+              text: 'Yes, Look It Up',
+              onPress: () => {
+                router.push(`/d/${code}`);
+              },
+            },
+          ]
+        );
+      } else {
+        // Mark as checked even if no code found
+        await markDeferredCodeChecked();
+      }
+    };
+
+    // Check on initial load
+    checkForDeferredCode();
+
+    // Also check when app comes back to foreground
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        checkForDeferredCode();
+      }
+      appState.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [user, loading, router]);
+}
+
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { user, loading } = useAuth();
 
   useProtectedRoute(user, loading);
+  useDeferredLinking(user, loading);
 
   if (loading) {
     return null;
