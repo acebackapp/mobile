@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   ScrollView,
@@ -11,6 +11,7 @@ import {
   Platform,
   View as RNView,
   useColorScheme,
+  InputAccessoryView,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Text, View } from '@/components/Themed';
@@ -49,8 +50,40 @@ export default function OrderStickersScreen() {
     country: 'US',
   });
 
+  // Input refs for keyboard navigation
+  const nameRef = useRef<TextInput>(null);
+  const streetRef = useRef<TextInput>(null);
+  const street2Ref = useRef<TextInput>(null);
+  const cityRef = useRef<TextInput>(null);
+  const stateRef = useRef<TextInput>(null);
+  const zipRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const inputRefs = [nameRef, streetRef, street2Ref, cityRef, stateRef, zipRef];
+  const [currentInputIndex, setCurrentInputIndex] = useState(0);
+
   const totalPriceCents = quantity * UNIT_PRICE_CENTS + SHIPPING_PRICE_CENTS;
   const totalPriceDisplay = (totalPriceCents / 100).toFixed(2);
+
+  // Keyboard navigation functions
+  const focusPreviousInput = () => {
+    if (currentInputIndex > 0) {
+      inputRefs[currentInputIndex - 1].current?.focus();
+      setCurrentInputIndex(currentInputIndex - 1);
+    }
+  };
+
+  const focusNextInput = () => {
+    if (currentInputIndex < inputRefs.length - 1) {
+      inputRefs[currentInputIndex + 1].current?.focus();
+      setCurrentInputIndex(currentInputIndex + 1);
+    } else {
+      // Last input, dismiss keyboard
+      inputRefs[currentInputIndex].current?.blur();
+    }
+  };
+
+  const inputAccessoryViewID = 'orderFormAccessory';
 
   const dynamicStyles = {
     container: {
@@ -207,7 +240,7 @@ export default function OrderStickersScreen() {
         style={[styles.container, dynamicStyles.container]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView style={[styles.scrollView, dynamicStyles.scrollView]} contentContainerStyle={styles.content}>
+        <ScrollView ref={scrollRef} style={[styles.scrollView, dynamicStyles.scrollView]} contentContainerStyle={styles.content}>
           {/* Product Info */}
           <RNView style={[styles.productCard, dynamicStyles.productCard]}>
             <RNView style={[styles.productImageContainer, dynamicStyles.productImageContainer]}>
@@ -253,64 +286,93 @@ export default function OrderStickersScreen() {
 
             <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>Full Name *</Text>
             <TextInput
+              ref={nameRef}
               style={[styles.input, dynamicStyles.input]}
               value={address.name}
               onChangeText={(text) => setAddress({ ...address, name: text })}
+              onFocus={() => setCurrentInputIndex(0)}
               placeholder="John Doe"
               autoComplete="name"
               autoCapitalize="words"
+              returnKeyType="next"
+              onSubmitEditing={() => streetRef.current?.focus()}
+              inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
             />
 
             <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>Street Address *</Text>
             <TextInput
+              ref={streetRef}
               style={[styles.input, dynamicStyles.input]}
               value={address.street_address}
               onChangeText={(text) => setAddress({ ...address, street_address: text })}
+              onFocus={() => setCurrentInputIndex(1)}
               placeholder="123 Main St"
               autoComplete="street-address"
+              returnKeyType="next"
+              onSubmitEditing={() => street2Ref.current?.focus()}
+              inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
             />
 
             <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>Apt, Suite, etc.</Text>
             <TextInput
+              ref={street2Ref}
               style={[styles.input, dynamicStyles.input]}
               value={address.street_address_2}
               onChangeText={(text) => setAddress({ ...address, street_address_2: text })}
+              onFocus={() => setCurrentInputIndex(2)}
               placeholder="Apt 4B (optional)"
+              returnKeyType="next"
+              onSubmitEditing={() => cityRef.current?.focus()}
+              inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
             />
 
             <RNView style={styles.cityStateRow}>
               <RNView style={styles.cityInput}>
                 <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>City *</Text>
                 <TextInput
+                  ref={cityRef}
                   style={[styles.input, dynamicStyles.input]}
                   value={address.city}
                   onChangeText={(text) => setAddress({ ...address, city: text })}
+                  onFocus={() => setCurrentInputIndex(3)}
                   placeholder="City"
                   autoComplete="postal-address-locality"
+                  returnKeyType="next"
+                  onSubmitEditing={() => stateRef.current?.focus()}
+                  inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
                 />
               </RNView>
               <RNView style={styles.stateInput}>
                 <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>State *</Text>
                 <TextInput
+                  ref={stateRef}
                   style={[styles.input, dynamicStyles.input]}
                   value={address.state}
                   onChangeText={(text) => setAddress({ ...address, state: text })}
+                  onFocus={() => setCurrentInputIndex(4)}
                   placeholder="CA"
                   autoCapitalize="characters"
                   maxLength={2}
+                  returnKeyType="next"
+                  onSubmitEditing={() => zipRef.current?.focus()}
+                  inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
                 />
               </RNView>
             </RNView>
 
             <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>ZIP Code *</Text>
             <TextInput
+              ref={zipRef}
               style={[styles.input, dynamicStyles.input, styles.zipInput]}
               value={address.postal_code}
               onChangeText={(text) => setAddress({ ...address, postal_code: text })}
+              onFocus={() => setCurrentInputIndex(5)}
               placeholder="12345"
               keyboardType="numeric"
               autoComplete="postal-code"
               maxLength={10}
+              returnKeyType="done"
+              inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
             />
           </RNView>
 
@@ -363,6 +425,48 @@ export default function OrderStickersScreen() {
           </Text>
         </RNView>
       </KeyboardAvoidingView>
+
+      {/* Input Accessory View for keyboard navigation (iOS only) */}
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID={inputAccessoryViewID}>
+          <RNView
+            style={{
+              backgroundColor: isDark ? '#1a1a1a' : '#f8f8f8',
+              borderTopWidth: 1,
+              borderTopColor: isDark ? '#333' : '#ddd',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+            }}
+          >
+            <Pressable
+              onPress={focusPreviousInput}
+              disabled={currentInputIndex === 0}
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                opacity: currentInputIndex === 0 ? 0.3 : 1,
+              }}
+            >
+              <FontAwesome name="chevron-up" size={20} color={Colors.violet.primary} />
+            </Pressable>
+            <Pressable
+              onPress={focusNextInput}
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+              }}
+            >
+              <FontAwesome
+                name={currentInputIndex === inputRefs.length - 1 ? 'check' : 'chevron-down'}
+                size={20}
+                color={Colors.violet.primary}
+              />
+            </Pressable>
+          </RNView>
+        </InputAccessoryView>
+      )}
     </>
   );
 }
