@@ -115,10 +115,10 @@ export default function DiscDetailScreen() {
       headerLeft: () => (
         <Pressable
           onPress={() => router.back()}
-          hitSlop={8}
-          style={{ flexDirection: 'row', alignItems: 'center', marginLeft: -8 }}>
-          <FontAwesome name="chevron-left" size={18} color={Colors.violet.primary} />
-          <Text style={{ color: Colors.violet.primary, fontSize: 17, marginLeft: 4 }}>Back</Text>
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 20 }}
+          style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <FontAwesome name="angle-left" size={28} color={Colors.violet.primary} style={{ marginRight: 6 }} />
+          <Text style={{ color: Colors.violet.primary, fontSize: 17 }}>Back</Text>
         </Pressable>
       ),
       headerRight: disc ? () => (
