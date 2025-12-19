@@ -69,8 +69,8 @@ describe('venmoDeepLink', () => {
         amount: 5,
         customNote: 'Custom payment note',
       });
-      // Spaces are preserved in app URL
-      expect(url).toContain('note=Custom payment note');
+      // Raw text is used in app URL (no encoding)
+      expect(url).toBe('venmo://paycharge?txn=pay&recipients=test-user&amount=5&note=Custom payment note');
     });
 
     it('handles decimal amounts', () => {
