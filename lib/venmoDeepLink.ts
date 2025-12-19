@@ -36,14 +36,13 @@ export const generatePaymentNote = (discName?: string): string => {
 
 /**
  * Generates the Venmo app deep link URL
- * Note: For app deep links, we encode but then convert %20 back to spaces
- * as Venmo's app handles literal spaces better than encoded ones
+ * Note: For app deep links, we don't encode the note - Venmo handles raw text
+ * Encoding causes + signs to appear instead of spaces
  */
 export const getVenmoAppUrl = (params: VenmoPaymentParams): string => {
   const { recipientUsername, amount, discName, customNote } = params;
-  const rawNote = customNote || generatePaymentNote(discName);
-  // Encode first, then replace %20 with actual spaces for the app deep link
-  const note = encodeURIComponent(rawNote).replace(/%20/g, ' ');
+  // Don't encode the note for app deep links - use raw text
+  const note = customNote || generatePaymentNote(discName);
   // Remove @ if user included it
   const username = recipientUsername.replace(/^@/, '');
 
