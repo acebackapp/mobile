@@ -65,6 +65,10 @@ export default function EditDiscScreen() {
   const [saving, setSaving] = useState(false);
 
   // Dynamic styles for dark/light mode
+  const dynamicContainerStyle = {
+    backgroundColor: isDark ? '#000' : '#f5f5f5',
+  };
+
   const dynamicInputStyle = {
     backgroundColor: isDark ? '#1a1a1a' : '#fff',
     borderColor: isDark ? '#333' : '#ccc',
@@ -490,7 +494,7 @@ export default function EditDiscScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={[styles.centerContainer, dynamicContainerStyle]}>
         <ActivityIndicator size="large" color={Colors.violet.primary} />
       </View>
     );
@@ -499,10 +503,10 @@ export default function EditDiscScreen() {
   return (
     <>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, dynamicContainerStyle]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={100}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={[styles.scrollView, dynamicContainerStyle]} contentContainerStyle={styles.scrollContent}>
         <View style={styles.form}>
           <Text style={styles.title}>Edit Disc</Text>
 

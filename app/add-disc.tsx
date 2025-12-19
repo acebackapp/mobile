@@ -40,6 +40,10 @@ export default function AddDiscScreen() {
   const [loading, setLoading] = useState(false);
 
   // Dynamic styles for dark/light mode
+  const dynamicContainerStyle = {
+    backgroundColor: isDark ? '#000' : '#f5f5f5',
+  };
+
   const dynamicInputStyle = {
     backgroundColor: isDark ? '#1a1a1a' : '#fff',
     borderColor: isDark ? '#333' : '#ccc',
@@ -307,10 +311,10 @@ export default function AddDiscScreen() {
   return (
     <>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, dynamicContainerStyle]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={100}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={[styles.scrollView, dynamicContainerStyle]} contentContainerStyle={styles.scrollContent}>
         <View style={styles.form}>
           <Text style={styles.title}>Add Disc to Your Bag</Text>
 
