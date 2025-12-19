@@ -18,6 +18,7 @@ import Colors from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Skeleton } from '@/components/Skeleton';
+import { openVenmoPayment } from '@/lib/venmoDeepLink';
 
 interface MeetupProposal {
   id: string;
@@ -65,6 +66,7 @@ interface RecoveryDetails {
     id: string;
     display_name: string;
     avatar_url?: string | null;
+    venmo_username?: string | null;
   };
   finder: {
     id: string;
@@ -483,6 +485,27 @@ export default function RecoveryDetailScreen() {
     }
   };
 
+  const handleSendReward = async () => {
+    if (!recovery?.owner.venmo_username || !recovery.disc?.reward_amount) {
+      Alert.alert('Error', 'Unable to send reward. Owner may not have Venmo set up.');
+      return;
+    }
+
+    const success = await openVenmoPayment({
+      recipientUsername: recovery.owner.venmo_username,
+      amount: recovery.disc.reward_amount,
+      discName: recovery.disc.mold || recovery.disc.name,
+    });
+
+    if (!success) {
+      Alert.alert(
+        'Could not open Venmo',
+        'Please install the Venmo app or visit venmo.com to send the reward.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -600,6 +623,28 @@ export default function RecoveryDetailScreen() {
           <Text style={styles.recoveredText}>
             This disc was successfully returned on {formatDate(recovery.recovered_at || recovery.updated_at)}
           </Text>
+
+          {/* Venmo reward button - shown to finder when owner has Venmo and reward set */}
+          {!isOwner && recovery.disc?.reward_amount && recovery.disc.reward_amount > 0 && recovery.owner.venmo_username && (
+            <Pressable style={styles.venmoButton} onPress={handleSendReward}>
+              <RNView style={styles.venmoIconBox}>
+                <Text style={styles.venmoIconText}>V</Text>
+              </RNView>
+              <Text style={styles.venmoButtonText}>
+                Send ${recovery.disc.reward_amount} Reward via Venmo
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Show message if reward exists but owner has no Venmo */}
+          {!isOwner && recovery.disc?.reward_amount && recovery.disc.reward_amount > 0 && !recovery.owner.venmo_username && (
+            <RNView style={styles.noVenmoMessage}>
+              <FontAwesome name="info-circle" size={16} color="#666" />
+              <Text style={styles.noVenmoText}>
+                Contact {recovery.owner.display_name} directly to receive your ${recovery.disc.reward_amount} reward
+              </Text>
+            </RNView>
+          )}
         </RNView>
       )}
 
@@ -1419,5 +1464,49 @@ const styles = StyleSheet.create({
     color: Colors.violet.primary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Venmo reward button styles
+  venmoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: '#008CFF',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 20,
+    width: '100%',
+  },
+  venmoIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  venmoIconText: {
+    color: '#008CFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  venmoButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  noVenmoMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 16,
+    paddingHorizontal: 12,
+  },
+  noVenmoText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
 });

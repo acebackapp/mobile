@@ -20,6 +20,9 @@
         "usesNonExemptEncryption": false
       },
       "associatedDomains": ["applinks:aceback.app"],
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": ["venmo"]
+      },
       "splash": {
         "image": "./assets/images/splash-icon.png",
         "resizeMode": "contain",
