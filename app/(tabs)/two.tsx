@@ -20,6 +20,7 @@ interface ProfileData {
   full_name: string | null;
   display_preference: DisplayPreference;
   avatar_url: string | null;
+  venmo_username: string | null;
 }
 
 interface ShippingAddressData {
@@ -57,6 +58,7 @@ export default function ProfileScreen() {
     full_name: null,
     display_preference: 'username',
     avatar_url: null,
+    venmo_username: null,
   });
   const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -64,8 +66,10 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [editingUsername, setEditingUsername] = useState(false);
   const [editingFullName, setEditingFullName] = useState(false);
+  const [editingVenmoUsername, setEditingVenmoUsername] = useState(false);
   const [tempUsername, setTempUsername] = useState('');
   const [tempFullName, setTempFullName] = useState('');
+  const [tempVenmoUsername, setTempVenmoUsername] = useState('');
   const [discsReturned, setDiscsReturned] = useState(0);
   const [activeRecoveries, setActiveRecoveries] = useState<ActiveRecovery[]>([]);
   const [myFinds, setMyFinds] = useState<ActiveRecovery[]>([]);
@@ -113,7 +117,7 @@ export default function ProfileScreen() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('username, full_name, display_preference, avatar_url')
+        .select('username, full_name, display_preference, avatar_url, venmo_username')
         .eq('id', user.id)
         .single();
 
@@ -125,6 +129,7 @@ export default function ProfileScreen() {
           full_name: data.full_name,
           display_preference: data.display_preference || 'username',
           avatar_url: data.avatar_url,
+          venmo_username: data.venmo_username,
         });
 
         // If user has a custom avatar, fetch signed URL
@@ -365,6 +370,13 @@ export default function ProfileScreen() {
   const handleSaveFullName = () => {
     saveProfile({ full_name: tempFullName.trim() || null });
     setEditingFullName(false);
+  };
+
+  const handleSaveVenmoUsername = () => {
+    // Remove @ if user included it
+    const cleanUsername = tempVenmoUsername.trim().replace(/^@/, '');
+    saveProfile({ venmo_username: cleanUsername || null });
+    setEditingVenmoUsername(false);
   };
 
   const handleDisplayPreferenceChange = () => {
@@ -1079,6 +1091,58 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Payment Settings Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Settings</Text>
+          <Text style={styles.sectionDescription}>
+            Add your Venmo username to receive rewards when someone returns your disc.
+          </Text>
+
+          {/* Venmo Username */}
+          <View style={styles.editableRow}>
+            <View style={styles.venmoIconContainer}>
+              <Text style={styles.venmoIcon}>V</Text>
+            </View>
+            <View style={styles.editableContent}>
+              <Text style={styles.detailLabel}>Venmo Username</Text>
+              {editingVenmoUsername ? (
+                <View style={styles.editInputContainer}>
+                  <View style={styles.venmoInputWrapper}>
+                    <Text style={styles.venmoAtSymbol}>@</Text>
+                    <TextInput
+                      style={[styles.editInput, styles.venmoInput, { backgroundColor: isDark ? '#333' : '#fff', color: isDark ? '#fff' : '#000' }]}
+                      value={tempVenmoUsername}
+                      onChangeText={setTempVenmoUsername}
+                      placeholder="your-username"
+                      placeholderTextColor="#999"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                  <TouchableOpacity onPress={handleSaveVenmoUsername} disabled={saving}>
+                    <FontAwesome name="check" size={18} color={Colors.violet.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setEditingVenmoUsername(false)} style={styles.cancelButton}>
+                    <FontAwesome name="times" size={18} color="#999" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.editableValue}
+                  onPress={() => {
+                    setTempVenmoUsername(profile.venmo_username || '');
+                    setEditingVenmoUsername(true);
+                  }}>
+                  <Text style={profile.venmo_username ? styles.detailValue : styles.placeholderValue}>
+                    {profile.venmo_username ? `@${profile.venmo_username}` : 'Add Venmo username'}
+                  </Text>
+                  <FontAwesome name="pencil" size={14} color="#999" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+
         {/* Shipping Address Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Shipping Address</Text>
@@ -1576,5 +1640,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.violet.primary,
     fontWeight: '500',
+  },
+  // Payment settings / Venmo styles
+  sectionDescription: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  venmoIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: '#008CFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  venmoIcon: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  venmoInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  venmoAtSymbol: {
+    fontSize: 16,
+    color: '#666',
+    marginRight: 2,
+  },
+  venmoInput: {
+    flex: 1,
+    borderWidth: 0,
+    paddingLeft: 0,
   },
 });
