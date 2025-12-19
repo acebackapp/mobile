@@ -54,7 +54,7 @@ export default function AddDiscScreen() {
 
   // Dynamic styles for dark/light mode
   const dynamicContainerStyle = {
-    backgroundColor: isDark ? '#000' : '#f5f5f5',
+    backgroundColor: isDark ? '#000' : '#fff',
   };
 
   const dynamicInputStyle = {
