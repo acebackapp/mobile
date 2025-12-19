@@ -18,6 +18,7 @@ import QRCode from 'react-native-qrcode-svg';
 import Colors from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { useColorScheme } from '@/components/useColorScheme';
+import { DiscDetailSkeleton } from '@/components/Skeleton';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -465,9 +466,9 @@ export default function DiscDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.violet.primary} />
-      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <DiscDetailSkeleton />
+      </ScrollView>
     );
   }
 

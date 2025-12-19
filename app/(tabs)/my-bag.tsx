@@ -15,6 +15,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Colors from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { getCachedDiscs, setCachedDiscs, isCacheStale } from '@/utils/discCache';
+import { DiscCardSkeleton } from '@/components/Skeleton';
 
 interface FlightNumbers {
   speed: number | null;
@@ -268,8 +269,14 @@ export default function MyBagScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.violet.primary} />
+      <View style={styles.container}>
+        <View style={styles.listContent}>
+          <DiscCardSkeleton />
+          <DiscCardSkeleton />
+          <DiscCardSkeleton />
+          <DiscCardSkeleton />
+          <DiscCardSkeleton />
+        </View>
       </View>
     );
   }

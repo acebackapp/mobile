@@ -25,6 +25,7 @@ import { PlasticPicker } from '@/components/PlasticPicker';
 import { CategoryPicker } from '@/components/CategoryPicker';
 import { CatalogDisc } from '@/hooks/useDiscCatalogSearch';
 import { compressImage } from '@/utils/imageCompression';
+import { FormFieldSkeleton, Skeleton } from '@/components/Skeleton';
 
 interface FlightNumbers {
   speed: number | null;
@@ -496,9 +497,17 @@ export default function EditDiscScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.centerContainer, dynamicContainerStyle]}>
-        <ActivityIndicator size="large" color={Colors.violet.primary} />
-      </View>
+      <ScrollView style={[styles.scrollView, dynamicContainerStyle]} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.form}>
+          <Skeleton width={150} height={28} style={{ marginBottom: 24 }} />
+          <FormFieldSkeleton />
+          <FormFieldSkeleton />
+          <FormFieldSkeleton />
+          <FormFieldSkeleton />
+          <FormFieldSkeleton />
+          <FormFieldSkeleton />
+        </View>
+      </ScrollView>
     );
   }
 
