@@ -49,6 +49,7 @@ interface RecoveryDetails {
   found_at: string;
   recovered_at?: string;
   surrendered_at?: string;
+  reward_paid_at?: string | null;
   created_at: string;
   updated_at: string;
   user_role: 'owner' | 'finder';
@@ -89,6 +90,7 @@ export default function RecoveryDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Set up custom back button that always works
@@ -507,6 +509,36 @@ export default function RecoveryDetailScreen() {
     }
   };
 
+  const handleMarkRewardReceived = async () => {
+    setMarkingPaid(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/mark-reward-paid`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ recovery_event_id: recoveryId }),
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to mark reward as received');
+
+      Alert.alert('Thank you!', 'The reward has been marked as received.');
+      fetchRecoveryDetails();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to mark reward as received');
+    } finally {
+      setMarkingPaid(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -625,8 +657,18 @@ export default function RecoveryDetailScreen() {
             This disc was successfully returned on {formatDate(recovery.recovered_at || recovery.updated_at)}
           </Text>
 
-          {/* Venmo reward button - shown to owner when finder has Venmo and reward set */}
-          {isOwner && recovery.disc?.reward_amount && recovery.disc.reward_amount > 0 && recovery.finder.venmo_username && (
+          {/* Reward already received confirmation */}
+          {recovery.reward_paid_at && recovery.disc?.reward_amount && recovery.disc.reward_amount > 0 && (
+            <RNView style={styles.rewardReceivedBadge}>
+              <FontAwesome name="check-circle" size={18} color="#2ECC71" />
+              <Text style={styles.rewardReceivedText}>
+                ${recovery.disc.reward_amount} Reward Received
+              </Text>
+            </RNView>
+          )}
+
+          {/* Venmo reward button - shown to owner when finder has Venmo, reward set, and NOT already paid */}
+          {isOwner && recovery.disc?.reward_amount && recovery.disc.reward_amount > 0 && recovery.finder.venmo_username && !recovery.reward_paid_at && (
             <Pressable style={styles.venmoButton} onPress={handleSendReward}>
               <RNView style={styles.venmoIconBox}>
                 <Text style={styles.venmoIconText}>V</Text>
@@ -637,14 +679,34 @@ export default function RecoveryDetailScreen() {
             </Pressable>
           )}
 
-          {/* Show message if reward exists but finder has no Venmo */}
-          {isOwner && recovery.disc?.reward_amount && recovery.disc.reward_amount > 0 && !recovery.finder.venmo_username && (
+          {/* Show message if reward exists but finder has no Venmo (and not already paid) */}
+          {isOwner && recovery.disc?.reward_amount && recovery.disc.reward_amount > 0 && !recovery.finder.venmo_username && !recovery.reward_paid_at && (
             <RNView style={styles.noVenmoMessage}>
               <FontAwesome name="info-circle" size={16} color="#666" />
               <Text style={styles.noVenmoText}>
                 Contact {recovery.finder.display_name} directly to send the ${recovery.disc.reward_amount} reward
               </Text>
             </RNView>
+          )}
+
+          {/* Mark reward as received button - shown to finder when reward exists and not yet marked */}
+          {!isOwner && recovery.disc?.reward_amount && recovery.disc.reward_amount > 0 && !recovery.reward_paid_at && (
+            <Pressable
+              style={styles.markReceivedButton}
+              onPress={handleMarkRewardReceived}
+              disabled={markingPaid}
+            >
+              {markingPaid ? (
+                <ActivityIndicator color="#2ECC71" />
+              ) : (
+                <>
+                  <FontAwesome name="check" size={16} color="#2ECC71" />
+                  <Text style={styles.markReceivedButtonText}>
+                    I Received the ${recovery.disc.reward_amount} Reward
+                  </Text>
+                </>
+              )}
+            </Pressable>
           )}
         </RNView>
       )}
@@ -1509,5 +1571,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  // Reward received styles
+  rewardReceivedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(46, 204, 113, 0.15)',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 16,
+    width: '100%',
+  },
+  rewardReceivedText: {
+    color: '#2ECC71',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  markReceivedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#2ECC71',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 16,
+    width: '100%',
+  },
+  markReceivedButtonText: {
+    color: '#2ECC71',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
