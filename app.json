@@ -19,7 +19,12 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "associatedDomains": ["applinks:aceback.app"]
+      "associatedDomains": ["applinks:aceback.app"],
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#3b1877"
+      }
     },
     "android": {
       "adaptiveIcon": {
