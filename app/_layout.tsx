@@ -36,7 +36,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (loaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {
+        // Ignore - splash screen may already be hidden during hot reload
+      });
     }
   }, [loaded]);
 
