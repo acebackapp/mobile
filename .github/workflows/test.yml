@@ -170,25 +170,27 @@ jobs:
 
             const baseNote = hasCachedBase ? '' : '\n\n> ⚠️ No cached coverage for main branch. Comparison will be available after merging.';
 
-            const body = `## 🔱 Heimdallr Coverage Report
-
-| Metric | Base (main) | PR | Diff |
-|--------|-------------|-----|------|
-| Statements | ${baseStmt}% | ${prStmt}% | ${formatDiff(stmtDiff)} |
-| Branches | ${baseBranch}% | ${prBranch}% | ${formatDiff(branchDiff)} |
-| Functions | ${baseFunc}% | ${prFunc}% | ${formatDiff(funcDiff)} |
-| Lines | ${baseLines}% | ${prLines}% | ${formatDiff(linesDiff)} |
-
-### Status
-${getStatus()}${baseNote}
-
-### Thresholds
-- Minimum coverage: **50%**
-- Coverage must not decrease from base branch
-
----
-*🔱 Heimdallr watches over your code coverage*
-<!-- heimdallr-coverage-report -->`;
+            const body = [
+              '## 🔱 Heimdallr Coverage Report',
+              '',
+              '| Metric | Base (main) | PR | Diff |',
+              '|--------|-------------|-----|------|',
+              `| Statements | ${baseStmt}% | ${prStmt}% | ${formatDiff(stmtDiff)} |`,
+              `| Branches | ${baseBranch}% | ${prBranch}% | ${formatDiff(branchDiff)} |`,
+              `| Functions | ${baseFunc}% | ${prFunc}% | ${formatDiff(funcDiff)} |`,
+              `| Lines | ${baseLines}% | ${prLines}% | ${formatDiff(linesDiff)} |`,
+              '',
+              '### Status',
+              getStatus() + baseNote,
+              '',
+              '### Thresholds',
+              '- Minimum coverage: **50%**',
+              '- Coverage must not decrease from base branch',
+              '',
+              '---',
+              '*🔱 Heimdallr watches over your code coverage*',
+              '<!-- heimdallr-coverage-report -->'
+            ].join('\n');
 
             // Find existing comment from Heimdallr
             const { data: comments } = await github.rest.issues.listComments({
