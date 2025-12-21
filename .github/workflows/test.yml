@@ -9,10 +9,11 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   test:
-    name: Run Tests
+    name: Run Tests with Coverage
     runs-on: ubuntu-latest
 
     steps:
@@ -28,8 +29,195 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test
+      - name: Run tests with coverage
+        run: npm run test:coverage -- --coverageReporters=json-summary --coverageReporters=text
 
-      - name: Run coverage
-        run: npm run test:coverage
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.sha }}
+          path: coverage/coverage-summary.json
+          retention-days: 5
+
+  coverage-check:
+    name: Coverage Check
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run PR coverage
+        run: npm run test:coverage -- --coverageReporters=json-summary
+
+      - name: Get PR coverage
+        id: pr-coverage
+        run: |
+          STATEMENTS=$(jq '.total.statements.pct' coverage/coverage-summary.json)
+          BRANCHES=$(jq '.total.branches.pct' coverage/coverage-summary.json)
+          FUNCTIONS=$(jq '.total.functions.pct' coverage/coverage-summary.json)
+          LINES=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+          echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+          echo "lines=$LINES" >> $GITHUB_OUTPUT
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+
+      - name: Install base dependencies
+        run: npm ci
+
+      - name: Run base coverage
+        id: base-coverage
+        run: |
+          npm run test:coverage -- --coverageReporters=json-summary || true
+          if [ -f coverage/coverage-summary.json ]; then
+            STATEMENTS=$(jq '.total.statements.pct' coverage/coverage-summary.json)
+            BRANCHES=$(jq '.total.branches.pct' coverage/coverage-summary.json)
+            FUNCTIONS=$(jq '.total.functions.pct' coverage/coverage-summary.json)
+            LINES=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          else
+            STATEMENTS=0
+            BRANCHES=0
+            FUNCTIONS=0
+            LINES=0
+          fi
+          echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+          echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+          echo "lines=$LINES" >> $GITHUB_OUTPUT
+
+      - name: Calculate coverage diff
+        id: diff
+        run: |
+          PR_STMT=${{ steps.pr-coverage.outputs.statements }}
+          BASE_STMT=${{ steps.base-coverage.outputs.statements }}
+          PR_LINES=${{ steps.pr-coverage.outputs.lines }}
+          BASE_LINES=${{ steps.base-coverage.outputs.lines }}
+
+          STMT_DIFF=$(echo "$PR_STMT - $BASE_STMT" | bc)
+          LINES_DIFF=$(echo "$PR_LINES - $BASE_LINES" | bc)
+
+          echo "stmt_diff=$STMT_DIFF" >> $GITHUB_OUTPUT
+          echo "lines_diff=$LINES_DIFF" >> $GITHUB_OUTPUT
+
+          # Check if coverage decreased
+          if (( $(echo "$STMT_DIFF < 0" | bc -l) )); then
+            echo "coverage_decreased=true" >> $GITHUB_OUTPUT
+          else
+            echo "coverage_decreased=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check if below minimum threshold (50%)
+          if (( $(echo "$PR_STMT < 50" | bc -l) )); then
+            echo "below_minimum=true" >> $GITHUB_OUTPUT
+          else
+            echo "below_minimum=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post coverage comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prStmt = ${{ steps.pr-coverage.outputs.statements }};
+            const prBranch = ${{ steps.pr-coverage.outputs.branches }};
+            const prFunc = ${{ steps.pr-coverage.outputs.functions }};
+            const prLines = ${{ steps.pr-coverage.outputs.lines }};
+
+            const baseStmt = ${{ steps.base-coverage.outputs.statements }};
+            const baseBranch = ${{ steps.base-coverage.outputs.branches }};
+            const baseFunc = ${{ steps.base-coverage.outputs.functions }};
+            const baseLines = ${{ steps.base-coverage.outputs.lines }};
+
+            const stmtDiff = (prStmt - baseStmt).toFixed(2);
+            const branchDiff = (prBranch - baseBranch).toFixed(2);
+            const funcDiff = (prFunc - baseFunc).toFixed(2);
+            const linesDiff = (prLines - baseLines).toFixed(2);
+
+            const formatDiff = (diff) => {
+              const num = parseFloat(diff);
+              if (num > 0) return `+${diff}% 📈`;
+              if (num < 0) return `${diff}% 📉`;
+              return `${diff}%`;
+            };
+
+            const getStatus = () => {
+              if (prStmt < 50) return '❌ **FAILED**: Coverage below 50% minimum threshold';
+              if (parseFloat(stmtDiff) < 0) return '❌ **FAILED**: Coverage decreased';
+              return '✅ **PASSED**: Coverage maintained or improved';
+            };
+
+            const body = `## 🔱 Heimdallr Coverage Report
+
+            | Metric | Base (main) | PR | Diff |
+            |--------|-------------|-----|------|
+            | Statements | ${baseStmt}% | ${prStmt}% | ${formatDiff(stmtDiff)} |
+            | Branches | ${baseBranch}% | ${prBranch}% | ${formatDiff(branchDiff)} |
+            | Functions | ${baseFunc}% | ${prFunc}% | ${formatDiff(funcDiff)} |
+            | Lines | ${baseLines}% | ${prLines}% | ${formatDiff(linesDiff)} |
+
+            ### Status
+            ${getStatus()}
+
+            ### Thresholds
+            - Minimum coverage: **50%**
+            - Coverage must not decrease from base branch
+
+            ---
+            *🔱 Heimdallr watches over your code coverage*
+            <!-- heimdallr-coverage-report -->`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.body && c.body.includes('<!-- heimdallr-coverage-report -->')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+      - name: Check coverage thresholds
+        run: |
+          if [ "${{ steps.diff.outputs.below_minimum }}" = "true" ]; then
+            echo "❌ Coverage is below 50% minimum threshold"
+            exit 1
+          fi
+
+          if [ "${{ steps.diff.outputs.coverage_decreased }}" = "true" ]; then
+            echo "❌ Coverage decreased from base branch"
+            exit 1
+          fi
+
+          echo "✅ Coverage checks passed"
