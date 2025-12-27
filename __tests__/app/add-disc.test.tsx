@@ -101,6 +101,17 @@ jest.mock('../../lib/errorHandler', () => ({
   handleError: jest.fn(),
 }));
 
+// Mock useDiscIdentification hook
+jest.mock('../../hooks/useDiscIdentification', () => ({
+  useDiscIdentification: () => ({
+    identify: jest.fn(),
+    isLoading: false,
+    error: null,
+    result: null,
+    reset: jest.fn(),
+  }),
+}));
+
 // Mock expo-camera
 // Using inline mock to avoid hoisting issues
 const mockRequestPermissionFn = jest.fn();
@@ -119,6 +130,14 @@ jest.mock('expo-camera', () => {
   };
 });
 
+// Helper function to render and select Manual Entry to show the form
+const renderAndSelectManualEntry = () => {
+  const utils = render(<AddDiscScreen />);
+  // Select "Manual Entry" to dismiss the options modal and show the form
+  fireEvent.press(utils.getByText('Manual Entry'));
+  return utils;
+};
+
 describe('AddDiscScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -127,8 +146,31 @@ describe('AddDiscScreen', () => {
     });
   });
 
-  it('renders form correctly', () => {
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+  describe('Options Modal', () => {
+    it('shows options modal on initial render', () => {
+      const { getAllByText, getByText } = render(<AddDiscScreen />);
+
+      // Use getAllByText since "Scan QR Sticker" appears in both modal and form
+      expect(getAllByText('Scan QR Sticker').length).toBeGreaterThan(0);
+      expect(getByText('Photo + AI Identify')).toBeTruthy();
+      expect(getByText('Manual Entry')).toBeTruthy();
+    });
+
+    it('hides options modal and shows form after selecting Manual Entry', () => {
+      const { getByText, queryByText, getByPlaceholderText } = render(<AddDiscScreen />);
+
+      fireEvent.press(getByText('Manual Entry'));
+
+      // Modal should be hidden
+      expect(queryByText('Photo + AI Identify')).toBeNull();
+      // Form should be visible
+      expect(getByText('Manufacturer')).toBeTruthy();
+      expect(getByPlaceholderText('e.g., Destroyer')).toBeTruthy();
+    });
+  });
+
+  it('renders form correctly after selecting Manual Entry', () => {
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     // Title is rendered by Stack.Screen in _layout.tsx, not in the component itself
     expect(getByText('Manufacturer')).toBeTruthy();
@@ -142,7 +184,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('shows validation error when mold is empty', async () => {
-    const { getByText } = render(<AddDiscScreen />);
+    const { getByText } = renderAndSelectManualEntry();
 
     fireEvent.press(getByText('Save Disc'));
 
@@ -152,7 +194,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('clears mold error when user types', async () => {
-    const { getByText, getByPlaceholderText, queryByText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText, queryByText } = renderAndSelectManualEntry();
 
     fireEvent.press(getByText('Save Disc'));
 
@@ -173,7 +215,7 @@ describe('AddDiscScreen', () => {
       json: () => Promise.resolve({ id: 'new-disc-id' }),
     });
 
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
     fireEvent.press(getByText('Save Disc'));
@@ -206,7 +248,7 @@ describe('AddDiscScreen', () => {
       json: () => Promise.resolve({ id: 'new-disc-id' }),
     });
 
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
     fireEvent.changeText(getByPlaceholderText('e.g., Innova'), 'Innova');
@@ -229,7 +271,7 @@ describe('AddDiscScreen', () => {
       data: { session: null },
     });
 
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
     fireEvent.press(getByText('Save Disc'));
@@ -249,7 +291,7 @@ describe('AddDiscScreen', () => {
       json: () => Promise.resolve({ error: 'Server error' }),
     });
 
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
     fireEvent.press(getByText('Save Disc'));
@@ -264,7 +306,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('displays color options', () => {
-    const { getByText } = render(<AddDiscScreen />);
+    const { getByText } = renderAndSelectManualEntry();
 
     expect(getByText('Red')).toBeTruthy();
     expect(getByText('Orange')).toBeTruthy();
@@ -285,7 +327,7 @@ describe('AddDiscScreen', () => {
       json: () => Promise.resolve({ id: 'new-disc-id' }),
     });
 
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
     fireEvent.press(getByText('Blue'));
@@ -299,7 +341,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('displays flight number inputs', () => {
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     expect(getByText('Speed')).toBeTruthy();
     expect(getByText('Glide')).toBeTruthy();
@@ -315,7 +357,7 @@ describe('AddDiscScreen', () => {
       json: () => Promise.resolve({ id: 'new-disc-id' }),
     });
 
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
     fireEvent.changeText(getByPlaceholderText('1-15'), '12');
@@ -331,7 +373,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('shows add photos section', () => {
-    const { getByText } = render(<AddDiscScreen />);
+    const { getByText } = renderAndSelectManualEntry();
 
     expect(getByText('Photos (Optional)')).toBeTruthy();
     expect(getByText('Add Photo')).toBeTruthy();
@@ -339,27 +381,27 @@ describe('AddDiscScreen', () => {
   });
 
   it('displays reward amount input', () => {
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     expect(getByText('Reward Amount')).toBeTruthy();
     expect(getByPlaceholderText('0.00')).toBeTruthy();
   });
 
   it('displays notes input', () => {
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     expect(getByText('Notes')).toBeTruthy();
     expect(getByPlaceholderText('Any additional notes about this disc...')).toBeTruthy();
   });
 
   it('displays mold label with required asterisk', () => {
-    const { getByText } = render(<AddDiscScreen />);
+    const { getByText } = renderAndSelectManualEntry();
 
     expect(getByText(/Mold/)).toBeTruthy();
   });
 
   it('allows entering weight value', () => {
-    const { getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByPlaceholderText } = renderAndSelectManualEntry();
 
     const weightInput = getByPlaceholderText('e.g., 175');
     fireEvent.changeText(weightInput, '168');
@@ -368,7 +410,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('allows entering notes', () => {
-    const { getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByPlaceholderText } = renderAndSelectManualEntry();
 
     const notesInput = getByPlaceholderText('Any additional notes about this disc...');
     fireEvent.changeText(notesInput, 'My favorite driver');
@@ -377,7 +419,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('allows entering reward amount', () => {
-    const { getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByPlaceholderText } = renderAndSelectManualEntry();
 
     const rewardInput = getByPlaceholderText('0.00');
     fireEvent.changeText(rewardInput, '15.00');
@@ -386,13 +428,13 @@ describe('AddDiscScreen', () => {
   });
 
   it('shows cancel button', () => {
-    const { getByText } = render(<AddDiscScreen />);
+    const { getByText } = renderAndSelectManualEntry();
 
     expect(getByText('Cancel')).toBeTruthy();
   });
 
   it('navigates back when cancel is pressed', () => {
-    const { getByText } = render(<AddDiscScreen />);
+    const { getByText } = renderAndSelectManualEntry();
 
     fireEvent.press(getByText('Cancel'));
 
@@ -400,20 +442,20 @@ describe('AddDiscScreen', () => {
   });
 
   it('shows save button', () => {
-    const { getByText } = render(<AddDiscScreen />);
+    const { getByText } = renderAndSelectManualEntry();
 
     expect(getByText('Save Disc')).toBeTruthy();
   });
 
   it('shows photo section', () => {
-    const { getByText } = render(<AddDiscScreen />);
+    const { getByText } = renderAndSelectManualEntry();
 
     expect(getByText('Photos (Optional)')).toBeTruthy();
     expect(getByText('Add Photo')).toBeTruthy();
   });
 
   it('allows entering reward amount', async () => {
-    const { getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByPlaceholderText } = renderAndSelectManualEntry();
 
     const rewardInput = getByPlaceholderText('0.00');
     fireEvent.changeText(rewardInput, '25.00');
@@ -427,7 +469,7 @@ describe('AddDiscScreen', () => {
       json: () => Promise.resolve({ id: 'new-disc-id' }),
     });
 
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
     fireEvent.changeText(getByPlaceholderText('Any additional notes about this disc...'), 'My go-to driver');
@@ -446,7 +488,7 @@ describe('AddDiscScreen', () => {
       json: () => Promise.resolve({ id: 'new-disc-id' }),
     });
 
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
     fireEvent.changeText(getByPlaceholderText('Select disc type'), 'Distance Driver');
@@ -460,7 +502,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('renders form elements correctly', () => {
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     expect(getByPlaceholderText('e.g., Destroyer')).toBeTruthy();
     expect(getByPlaceholderText('e.g., Innova')).toBeTruthy();
@@ -468,7 +510,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('shows turn and fade flight number inputs', () => {
-    const { getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByPlaceholderText } = renderAndSelectManualEntry();
 
     expect(getByPlaceholderText('-5 to 1')).toBeTruthy();
     expect(getByPlaceholderText('0-5')).toBeTruthy();
@@ -480,7 +522,7 @@ describe('AddDiscScreen', () => {
       json: () => Promise.resolve({ id: 'new-disc-id' }),
     });
 
-    const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+    const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
     fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
     fireEvent.changeText(getByPlaceholderText('-5 to 1'), '-2');
@@ -496,7 +538,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('displays all color options', () => {
-    const { getByText } = render(<AddDiscScreen />);
+    const { getByText } = renderAndSelectManualEntry();
 
     // Verify all colors are shown
     expect(getByText('Red')).toBeTruthy();
@@ -506,7 +548,7 @@ describe('AddDiscScreen', () => {
   });
 
   it('shows photo limit text', () => {
-    const { getByText } = render(<AddDiscScreen />);
+    const { getByText } = renderAndSelectManualEntry();
 
     expect(getByText('You can add up to 4 photos per disc')).toBeTruthy();
   });
@@ -518,7 +560,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('0.00'), '25.50');
@@ -537,7 +579,7 @@ describe('AddDiscScreen', () => {
     it('handles network error gracefully', async () => {
       (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -556,7 +598,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Blue'));
@@ -575,7 +617,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Red'));
@@ -589,7 +631,7 @@ describe('AddDiscScreen', () => {
     });
 
     it('shows Multi color option', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       expect(getByText('Multi')).toBeTruthy();
     });
 
@@ -599,7 +641,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Multi'));
@@ -620,7 +662,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), '  Destroyer  ');
       fireEvent.press(getByText('Save Disc'));
@@ -633,7 +675,7 @@ describe('AddDiscScreen', () => {
     });
 
     it('shows validation error for whitespace-only mold', async () => {
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), '   ');
       fireEvent.press(getByText('Save Disc'));
@@ -651,7 +693,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       // Leave flight numbers empty
@@ -671,7 +713,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('-5 to 1'), '-3');
@@ -690,7 +732,7 @@ describe('AddDiscScreen', () => {
       // Make fetch never resolve to keep loading
       (global.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -709,7 +751,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -736,20 +778,20 @@ describe('AddDiscScreen', () => {
 
   describe('dark mode', () => {
     it('renders correctly', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       expect(getByText('Manufacturer')).toBeTruthy();
     });
   });
 
   describe('QR code section', () => {
     it('shows QR code scanning section', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('Scan QR Sticker')).toBeTruthy();
     });
 
     it('shows instruction text for QR scanning', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('Link an Discr sticker to this disc')).toBeTruthy();
     });
@@ -757,13 +799,13 @@ describe('AddDiscScreen', () => {
 
   describe('photo upload', () => {
     it('shows add photo button', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('Add Photo')).toBeTruthy();
     });
 
     it('shows photo section with camera icon', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('Add Photo')).toBeTruthy();
     });
@@ -771,7 +813,7 @@ describe('AddDiscScreen', () => {
 
   describe('form fields', () => {
     it('shows all form section labels', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('Manufacturer')).toBeTruthy();
       expect(getByText('Plastic')).toBeTruthy();
@@ -783,14 +825,14 @@ describe('AddDiscScreen', () => {
     });
 
     it('shows mold field with required indicator', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       // Mold label exists
       expect(getByText(/Mold/)).toBeTruthy();
     });
 
     it('renders reward amount helper text', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       // Check for reward description text
       expect(getByText(/reward/i)).toBeTruthy();
@@ -804,7 +846,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('e.g., Innova'), '  Innova  ');
@@ -823,7 +865,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('e.g., 175'), '174.5');
@@ -840,7 +882,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       // Don't enter reward amount
@@ -860,7 +902,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ message: 'Validation failed' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -881,7 +923,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({}),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -896,7 +938,7 @@ describe('AddDiscScreen', () => {
     it('shows loading indicator while saving', async () => {
       (global.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
 
-      const { getByText, getByPlaceholderText, queryByText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText, queryByText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -910,7 +952,7 @@ describe('AddDiscScreen', () => {
 
   describe('form input interactions', () => {
     it('allows entering all flight numbers', async () => {
-      const { getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('1-15'), '12');
       fireEvent.changeText(getByPlaceholderText('1-7'), '5');
@@ -929,7 +971,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -951,7 +993,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       // Select first color
       fireEvent.press(getByText('Red'));
@@ -969,7 +1011,7 @@ describe('AddDiscScreen', () => {
     });
 
     it('shows all 11 color options', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       const colors = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Pink', 'White', 'Black', 'Gray', 'Multi'];
       colors.forEach(color => {
@@ -980,7 +1022,7 @@ describe('AddDiscScreen', () => {
 
   describe('notes section', () => {
     it('allows multiline notes input', () => {
-      const { getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByPlaceholderText } = renderAndSelectManualEntry();
 
       const notesInput = getByPlaceholderText('Any additional notes about this disc...');
       fireEvent.changeText(notesInput, 'Line 1\nLine 2');
@@ -994,7 +1036,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       const longNotes = 'A'.repeat(500);
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
@@ -1011,7 +1053,7 @@ describe('AddDiscScreen', () => {
 
   describe('weight input', () => {
     it('accepts numeric weight', () => {
-      const { getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByPlaceholderText } = renderAndSelectManualEntry();
 
       const weightInput = getByPlaceholderText('e.g., 175');
       fireEvent.changeText(weightInput, '168');
@@ -1025,7 +1067,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('e.g., 175'), '172');
@@ -1041,18 +1083,18 @@ describe('AddDiscScreen', () => {
 
   describe('QR code scanning', () => {
     it('shows QR scan button', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       expect(getByText('Scan QR Sticker')).toBeTruthy();
     });
 
     it('shows QR scan description', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       expect(getByText('Link an Discr sticker to this disc')).toBeTruthy();
     });
 
     // Skip - camera permission mock has hoisting issues
     it.skip('handles scan QR button press', async () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       await waitFor(() => {
         expect(getByText('Scan QR Sticker')).toBeTruthy();
@@ -1068,7 +1110,7 @@ describe('AddDiscScreen', () => {
 
     // Skip - camera permission mock has hoisting issues
     it.skip('shows alert when camera permission denied', async () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       fireEvent.press(getByText('Scan QR Sticker'));
 
@@ -1084,12 +1126,12 @@ describe('AddDiscScreen', () => {
 
   describe('photo handling', () => {
     it('shows add photo button', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       expect(getByText('Add Photo')).toBeTruthy();
     });
 
     it('handles add photo press', async () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       fireEvent.press(getByText('Add Photo'));
 
@@ -1103,7 +1145,7 @@ describe('AddDiscScreen', () => {
     });
 
     it('shows photo options with take photo and library', async () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       fireEvent.press(getByText('Add Photo'));
 
@@ -1123,7 +1165,7 @@ describe('AddDiscScreen', () => {
       const ImagePicker = require('expo-image-picker');
       ImagePicker.requestMediaLibraryPermissionsAsync.mockResolvedValue({ status: 'denied' });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       fireEvent.press(getByText('Add Photo'));
 
@@ -1158,7 +1200,7 @@ describe('AddDiscScreen', () => {
         assets: [{ uri: 'file://test-photo.jpg' }],
       });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       fireEvent.press(getByText('Add Photo'));
 
@@ -1189,7 +1231,7 @@ describe('AddDiscScreen', () => {
         assets: [],
       });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       fireEvent.press(getByText('Add Photo'));
 
@@ -1212,12 +1254,12 @@ describe('AddDiscScreen', () => {
 
   describe('photo upload on save', () => {
     it('shows photos section', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       expect(getByText('Photos (Optional)')).toBeTruthy();
     });
 
     it('limits photos to 4', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       expect(getByText('You can add up to 4 photos per disc')).toBeTruthy();
     });
   });
@@ -1228,7 +1270,7 @@ describe('AddDiscScreen', () => {
         data: { session: null },
       });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       // QR scan section should still render
       expect(getByText('Scan QR Sticker')).toBeTruthy();
@@ -1242,7 +1284,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -1259,7 +1301,7 @@ describe('AddDiscScreen', () => {
     it('shows loading while saving', async () => {
       (global.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -1277,14 +1319,14 @@ describe('AddDiscScreen', () => {
         data: { session: { access_token: 'test-token' } },
       });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       expect(getByText('Scan QR Sticker')).toBeTruthy();
     });
   });
 
   describe('reward amount validation', () => {
     it('rejects invalid characters in reward amount', () => {
-      const { getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByPlaceholderText } = renderAndSelectManualEntry();
 
       const rewardInput = getByPlaceholderText('0.00');
       fireEvent.changeText(rewardInput, 'abc');
@@ -1294,7 +1336,7 @@ describe('AddDiscScreen', () => {
     });
 
     it('allows decimal in reward amount', () => {
-      const { getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByPlaceholderText } = renderAndSelectManualEntry();
 
       const rewardInput = getByPlaceholderText('0.00');
       fireEvent.changeText(rewardInput, '25.50');
@@ -1303,7 +1345,7 @@ describe('AddDiscScreen', () => {
     });
 
     it('limits decimal places to 2', () => {
-      const { getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByPlaceholderText } = renderAndSelectManualEntry();
 
       const rewardInput = getByPlaceholderText('0.00');
       fireEvent.changeText(rewardInput, '25.50');
@@ -1314,7 +1356,7 @@ describe('AddDiscScreen', () => {
 
   describe('fee hint display', () => {
     it('shows fee hint when reward amount entered', async () => {
-      const { getByPlaceholderText, getByText } = render(<AddDiscScreen />);
+      const { getByPlaceholderText, getByText } = renderAndSelectManualEntry();
 
       const rewardInput = getByPlaceholderText('0.00');
       fireEvent.changeText(rewardInput, '25.00');
@@ -1327,7 +1369,7 @@ describe('AddDiscScreen', () => {
 
   describe('mold autocomplete hint', () => {
     it('shows search hint for mold', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('Start typing to search known discs')).toBeTruthy();
     });
@@ -1335,7 +1377,7 @@ describe('AddDiscScreen', () => {
 
   describe('disc type field', () => {
     it('shows disc type label', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('Disc Type')).toBeTruthy();
     });
@@ -1343,7 +1385,7 @@ describe('AddDiscScreen', () => {
 
   describe('photo section', () => {
     it('shows photo section when photos are empty', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('Add Photo')).toBeTruthy();
     });
@@ -1351,7 +1393,7 @@ describe('AddDiscScreen', () => {
 
   describe('form field interactions', () => {
     it('clears plastic when manufacturer changes', async () => {
-      const { getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByPlaceholderText } = renderAndSelectManualEntry();
 
       const manufacturerInput = getByPlaceholderText('e.g., Innova');
       const plasticInput = getByPlaceholderText('e.g., Star');
@@ -1370,7 +1412,7 @@ describe('AddDiscScreen', () => {
   // Skip - camera permission mock has hoisting issues
   describe.skip('QR scanner with permission granted', () => {
     it('opens scanner when permission already granted', async () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       fireEvent.press(getByText('Scan QR Sticker'));
 
@@ -1382,7 +1424,7 @@ describe('AddDiscScreen', () => {
 
   describe('photo limit handling', () => {
     it('shows max photos hint', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('You can add up to 4 photos per disc')).toBeTruthy();
     });
@@ -1390,7 +1432,7 @@ describe('AddDiscScreen', () => {
 
   describe('QR button loading state', () => {
     it('shows QR scan button text', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('Scan QR Sticker')).toBeTruthy();
       expect(getByText('Link an Discr sticker to this disc')).toBeTruthy();
@@ -1399,7 +1441,7 @@ describe('AddDiscScreen', () => {
 
   describe('take photo flow', () => {
     it('opens camera for taking photo', async () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       fireEvent.press(getByText('Add Photo'));
 
@@ -1428,7 +1470,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ error: 'Server error' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('e.g., Innova'), 'Innova');
@@ -1450,7 +1492,7 @@ describe('AddDiscScreen', () => {
 
   describe('all form labels', () => {
     it('shows all required labels', () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       expect(getByText('Manufacturer')).toBeTruthy();
       expect(getByText('Disc Type')).toBeTruthy();
@@ -1469,7 +1511,7 @@ describe('AddDiscScreen', () => {
 
   describe('cancel photo alert', () => {
     it('handles cancel in photo options', async () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       fireEvent.press(getByText('Add Photo'));
 
@@ -1502,7 +1544,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ qr_exists: false }),
       });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       // Simulate scanning - we need to call the processScannedQrCode function
       // Since we can't directly trigger barcode scan, we'll test via button press
@@ -1522,7 +1564,7 @@ describe('AddDiscScreen', () => {
         }),
       });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
@@ -1540,7 +1582,7 @@ describe('AddDiscScreen', () => {
         }),
       });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
@@ -1558,7 +1600,7 @@ describe('AddDiscScreen', () => {
         }),
       });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
@@ -1574,7 +1616,7 @@ describe('AddDiscScreen', () => {
         data: { session: null },
       });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
@@ -1614,7 +1656,7 @@ describe('AddDiscScreen', () => {
           }),
         });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
@@ -1641,7 +1683,7 @@ describe('AddDiscScreen', () => {
           }),
         });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
@@ -1671,7 +1713,7 @@ describe('AddDiscScreen', () => {
         }),
       });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
@@ -1709,7 +1751,7 @@ describe('AddDiscScreen', () => {
           json: () => Promise.resolve({ success: true }),
         });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       // Add a photo through the library flow
       fireEvent.press(getByText('Add Photo'));
@@ -1748,7 +1790,7 @@ describe('AddDiscScreen', () => {
           json: () => Promise.resolve({ error: 'Upload failed' }),
         });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -1773,7 +1815,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'disc-123' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -1793,7 +1835,7 @@ describe('AddDiscScreen', () => {
       const ImagePicker = require('expo-image-picker');
       ImagePicker.requestMediaLibraryPermissionsAsync.mockResolvedValue({ status: 'granted' });
 
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       // Simulate having 4 photos already (would need to test with actual state manipulation)
       fireEvent.press(getByText('Add Photo'));
@@ -1804,7 +1846,7 @@ describe('AddDiscScreen', () => {
     });
 
     it('shows alert when trying to add 5th photo via camera', async () => {
-      const { getByText } = render(<AddDiscScreen />);
+      const { getByText } = renderAndSelectManualEntry();
 
       fireEvent.press(getByText('Add Photo'));
 
@@ -1816,7 +1858,7 @@ describe('AddDiscScreen', () => {
 
   describe('reward amount edge cases', () => {
     it('prevents multiple decimal points', () => {
-      const { getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByPlaceholderText } = renderAndSelectManualEntry();
 
       const rewardInput = getByPlaceholderText('0.00');
       fireEvent.changeText(rewardInput, '25.50.00');
@@ -1826,7 +1868,7 @@ describe('AddDiscScreen', () => {
     });
 
     it('limits to 2 decimal places', () => {
-      const { getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByPlaceholderText } = renderAndSelectManualEntry();
 
       const rewardInput = getByPlaceholderText('0.00');
       fireEvent.changeText(rewardInput, '25.999');
@@ -1841,7 +1883,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('0.00'), '0');
@@ -1862,7 +1904,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ details: 'Detailed validation error' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.press(getByText('Save Disc'));
@@ -1884,7 +1926,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('-5 to 1'), '-1.5');
@@ -1903,7 +1945,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       // Leave fade empty
@@ -1924,7 +1966,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('e.g., Star'), '  Star  ');
@@ -1943,7 +1985,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('Any additional notes about this disc...'), '  My favorite disc  ');
@@ -1962,7 +2004,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       fireEvent.changeText(getByPlaceholderText('Select disc type'), '  Distance Driver  ');
@@ -1981,7 +2023,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       // Color is set via button press, but test the trim logic applies
@@ -2003,7 +2045,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       // Leave manufacturer empty
@@ -2022,7 +2064,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       // Leave plastic empty
@@ -2041,7 +2083,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       // Leave category empty
@@ -2060,7 +2102,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       // Leave color unselected
@@ -2079,7 +2121,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       // Leave notes empty
@@ -2098,7 +2140,7 @@ describe('AddDiscScreen', () => {
         json: () => Promise.resolve({ id: 'new-disc-id' }),
       });
 
-      const { getByText, getByPlaceholderText } = render(<AddDiscScreen />);
+      const { getByText, getByPlaceholderText } = renderAndSelectManualEntry();
 
       fireEvent.changeText(getByPlaceholderText('e.g., Destroyer'), 'Destroyer');
       // Leave weight empty
