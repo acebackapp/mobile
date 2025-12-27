@@ -769,8 +769,21 @@ export default function AddDiscScreen() {
 
       {/* Only render the form after user selects an entry mode */}
       {entryMode !== null && (
+      <View style={[styles.container, dynamicContainerStyle]}>
+        {/* Custom header */}
+        <View style={[styles.formHeader, { borderBottomColor: isDark ? '#333' : '#e0e0e0' }]}>
+          <View style={styles.formHeaderSpacer} />
+          <Text style={[styles.formHeaderTitle, { color: textColor }]}>Add Disc</Text>
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={8}
+            style={styles.formHeaderClose}
+          >
+            <FontAwesome name="times" size={20} color={isDark ? '#999' : '#666'} />
+          </Pressable>
+        </View>
       <KeyboardAvoidingView
-        style={[styles.container, dynamicContainerStyle]}
+        style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={100}>
       <ScrollView style={[styles.scrollView, dynamicContainerStyle]} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
@@ -1062,6 +1075,7 @@ export default function AddDiscScreen() {
         </View>
       </ScrollView>
       </KeyboardAvoidingView>
+      </View>
       )}
 
       {/* istanbul ignore next -- Native camera component requires device testing */}
@@ -1132,6 +1146,30 @@ export default function AddDiscScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  formHeaderSpacer: {
+    width: 36,
+  },
+  formHeaderTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  formHeaderClose: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
