@@ -34,6 +34,7 @@ export interface IdentificationResult {
   catalog_match: CatalogMatch | null;
   similar_matches: CatalogMatch[];
   processing_time_ms: number;
+  log_id: string | null;
 }
 
 interface UseDiscIdentificationResult {
@@ -110,6 +111,7 @@ export function useDiscIdentification(): UseDiscIdentificationResult {
         catalog_match: data.catalog_match,
         similar_matches: data.similar_matches || [],
         processing_time_ms: data.processing_time_ms,
+        log_id: data.log_id || null,
       };
 
       setResult(identificationResult);

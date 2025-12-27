@@ -113,6 +113,7 @@ export default function AddDiscScreen() {
   const [showAiCropper, setShowAiCropper] = useState(false);
   const [aiImageUri, setAiImageUri] = useState('');
   const [showIdentificationResult, setShowIdentificationResult] = useState(false);
+  const [aiLogId, setAiLogId] = useState<string | null>(null);
 
   // Validation errors
   const [moldError, setMoldError] = useState('');
@@ -469,6 +470,11 @@ export default function AddDiscScreen() {
       setColor(identification.color);
     }
 
+    // Save the AI log ID for tracking corrections
+    if (result.log_id) {
+      setAiLogId(result.log_id);
+    }
+
     // If we have a catalog match, use its flight numbers (more reliable)
     if (catalog_match) {
       if (catalog_match.category) setCategory(catalog_match.category);
@@ -524,6 +530,7 @@ export default function AddDiscScreen() {
         reward_amount: rewardAmount ? parseFloat(rewardAmount) : undefined, // Send as dollars (decimal)
         notes: notes.trim() || undefined,
         qr_code_id: qrCodeId || undefined, // Link QR code if scanned
+        ai_identification_log_id: aiLogId || undefined, // Track AI identification for learning
       };
 
       console.log('Creating disc with:', JSON.stringify(requestBody, null, 2));
