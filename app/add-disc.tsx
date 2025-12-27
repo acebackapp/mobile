@@ -465,6 +465,9 @@ export default function AddDiscScreen() {
     if (identification.plastic) {
       setPlastic(identification.plastic);
     }
+    if (identification.color) {
+      setColor(identification.color);
+    }
 
     // If we have a catalog match, use its flight numbers (more reliable)
     if (catalog_match) {

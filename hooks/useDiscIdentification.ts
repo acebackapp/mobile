@@ -14,6 +14,7 @@ export interface DiscIdentification {
     fade: number | null;
   } | null;
   plastic: string | null;
+  color: string | null;
 }
 
 export interface CatalogMatch {
