@@ -5,9 +5,12 @@ import {
   ActivityIndicator,
   Pressable,
   View,
+  Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, Stack } from 'expo-router';
 import { useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { Text } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -68,6 +71,30 @@ export default function ShotRecommendationScreen() {
     reset();
   };
 
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+      allowsEditing: false,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await getRecommendation(result.assets[0].uri);
+    }
+  };
+
+  const handleChoosePhoto = () => {
+    Alert.alert(
+      'Choose Photo',
+      'How would you like to capture the hole?',
+      [
+        { text: 'Take Photo', onPress: handleTakePhoto },
+        { text: 'Choose from Library', onPress: handlePickImage },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
   const renderInitialState = () => (
     <View style={styles.centeredContent}>
       <View style={[styles.iconContainer, { backgroundColor: 'rgba(127, 34, 206, 0.1)' }]}>
@@ -82,10 +109,10 @@ export default function ShotRecommendationScreen() {
       </Text>
       <Pressable
         style={[styles.actionButton, { backgroundColor: Colors.violet.primary }]}
-        onPress={handleTakePhoto}
+        onPress={handleChoosePhoto}
       >
         <FontAwesome name="camera" size={20} color="#fff" style={{ marginRight: 8 }} />
-        <Text style={styles.actionButtonText}>Take Photo</Text>
+        <Text style={styles.actionButtonText}>Choose Photo</Text>
       </Pressable>
     </View>
   );
@@ -241,7 +268,10 @@ export default function ShotRecommendationScreen() {
         {/* Try Another Shot Button */}
         <Pressable
           style={[styles.actionButton, styles.tryAnotherButton, { backgroundColor: Colors.violet.primary }]}
-          onPress={handleTryAnotherShot}
+          onPress={() => {
+            reset();
+            handleChoosePhoto();
+          }}
         >
           <FontAwesome name="camera" size={20} color="#fff" style={{ marginRight: 8 }} />
           <Text style={styles.actionButtonText}>Try Another Shot</Text>
@@ -251,7 +281,8 @@ export default function ShotRecommendationScreen() {
   };
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+      <Stack.Screen options={{ headerShown: false }} />
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: isDark ? '#333' : '#e0e0e0' }]}>
         <Pressable
@@ -282,7 +313,7 @@ export default function ShotRecommendationScreen() {
         showCircleGuide={false}
         helperText="Capture the fairway from the tee pad"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

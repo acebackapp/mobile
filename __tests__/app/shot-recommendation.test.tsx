@@ -9,6 +9,9 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({
     back: mockRouterBack,
   }),
+  Stack: {
+    Screen: () => null,
+  },
 }));
 
 // Mock supabase
@@ -50,6 +53,17 @@ jest.mock('../../hooks/useShotRecommendation', () => ({
 jest.mock('expo-camera', () => ({
   useCameraPermissions: () => [{ granted: true }, jest.fn()],
   CameraView: 'CameraView',
+}));
+
+// Mock react-native-safe-area-context
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+// Mock expo-image-picker
+const mockLaunchImageLibraryAsync = jest.fn();
+jest.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: () => mockLaunchImageLibraryAsync(),
 }));
 
 // Mock Alert
