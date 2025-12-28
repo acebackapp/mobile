@@ -22,6 +22,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { DiscDetailSkeleton } from '@/components/Skeleton';
 import { formatFeeHint } from '@/lib/stripeFees';
 import { handleError } from '@/lib/errorHandler';
+import FlightPath from '@/components/FlightPath';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -658,6 +659,19 @@ export default function DiscDetailScreen() {
             </View>
           </View>
         )}
+
+        {/* Flight Path Visualization */}
+        {disc.flight_numbers.speed !== null &&
+          disc.flight_numbers.glide !== null &&
+          disc.flight_numbers.turn !== null &&
+          disc.flight_numbers.fade !== null && (
+            <FlightPath
+              speed={disc.flight_numbers.speed}
+              glide={disc.flight_numbers.glide}
+              turn={disc.flight_numbers.turn}
+              fade={disc.flight_numbers.fade}
+            />
+          )}
 
         {/* Reward Amount */}
         {disc.reward_amount && parseFloat(disc.reward_amount) > 0 && (
