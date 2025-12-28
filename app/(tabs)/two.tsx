@@ -14,6 +14,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { compressImage } from '@/utils/imageCompression';
 import { RecoveryCardSkeleton, FormFieldSkeleton, Skeleton } from '@/components/Skeleton';
 import { handleError, showSuccess } from '@/lib/errorHandler';
+import DiscPreferencesSection, { ThrowingHand } from '@/components/DiscPreferencesSection';
 
 type DisplayPreference = 'username' | 'full_name';
 
@@ -23,6 +24,7 @@ interface ProfileData {
   username: string | null;
   full_name: string | null;
   display_preference: DisplayPreference;
+  throwing_hand: ThrowingHand;
   avatar_url: string | null;
   venmo_username: string | null;
   stripe_connect_status: ConnectStatus;
@@ -62,6 +64,7 @@ export default function ProfileScreen() {
     username: null,
     full_name: null,
     display_preference: 'username',
+    throwing_hand: 'right',
     avatar_url: null,
     venmo_username: null,
     stripe_connect_status: 'none',
@@ -142,7 +145,7 @@ export default function ProfileScreen() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('username, full_name, display_preference, avatar_url, venmo_username, stripe_connect_status')
+        .select('username, full_name, display_preference, throwing_hand, avatar_url, venmo_username, stripe_connect_status')
         .eq('id', user.id)
         .single();
 
@@ -153,6 +156,7 @@ export default function ProfileScreen() {
           username: data.username,
           full_name: data.full_name,
           display_preference: data.display_preference || 'username',
+          throwing_hand: (data.throwing_hand as ThrowingHand) || 'right',
           avatar_url: data.avatar_url,
           venmo_username: data.venmo_username,
           stripe_connect_status: (data.stripe_connect_status as ConnectStatus) || 'none',
@@ -422,6 +426,11 @@ export default function ProfileScreen() {
         { text: 'Cancel', style: 'cancel' },
       ]
     );
+  };
+
+  // istanbul ignore next -- Throwing hand preference save
+  const handleThrowingHandChange = (hand: ThrowingHand) => {
+    saveProfile({ throwing_hand: hand });
   };
 
   useEffect(() => {
@@ -1202,6 +1211,13 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+
+        {/* Disc Preferences Section */}
+        <DiscPreferencesSection
+          throwingHand={profile.throwing_hand}
+          onThrowingHandChange={handleThrowingHandChange}
+          saving={saving}
+        />
 
         {/* Rewards & Payments Section */}
         <View style={styles.section}>
