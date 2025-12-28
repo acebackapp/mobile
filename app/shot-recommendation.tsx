@@ -6,6 +6,7 @@ import {
   Pressable,
   View,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
@@ -199,6 +200,13 @@ export default function ShotRecommendationScreen() {
 
           {/* Disc Info */}
           <View style={styles.discSection}>
+            {disc?.photo_url && (
+              <Image
+                source={{ uri: disc.photo_url }}
+                style={styles.discPhoto}
+                resizeMode="cover"
+              />
+            )}
             <View style={styles.discInfo}>
               <Text style={[styles.discName, dynamicStyles.text]}>
                 {disc?.name || 'Unknown Disc'}
@@ -460,10 +468,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   discSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
+  discPhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 16,
+  },
   discInfo: {
-    alignItems: 'center',
+    flex: 1,
+    alignItems: 'flex-start',
   },
   discName: {
     fontSize: 24,
