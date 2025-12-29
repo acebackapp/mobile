@@ -5,7 +5,6 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
-  Image,
   View as RNView,
   useColorScheme,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { getCachedDiscs, setCachedDiscs, isCacheStale } from '@/utils/discCache';
 import { DiscCardSkeleton } from '@/components/Skeleton';
 import { handleError } from '@/lib/errorHandler';
+import DiscAvatar from '@/components/DiscAvatar';
 
 interface FlightNumbers {
   speed: number | null;
@@ -79,21 +79,6 @@ const COLOR_MAP: Record<string, string> = {
   Black: '#2C3E50',
   Gray: '#95A5A6',
   Multi: 'rainbow',
-};
-
-// Two-tone color shades for disc placeholder (lighter, darker)
-const COLOR_SHADES: Record<string, { light: string; dark: string }> = {
-  Red: { light: '#fadbd8', dark: '#c0392b' },
-  Orange: { light: '#fdebd0', dark: '#d35400' },
-  Yellow: { light: '#fcf3cf', dark: '#d4ac0d' },
-  Green: { light: '#d5f5e3', dark: '#1e8449' },
-  Blue: { light: '#d4e6f1', dark: '#2471a3' },
-  Purple: { light: '#e8daef', dark: '#7d3c98' },
-  Pink: { light: '#fadbe8', dark: '#c2185b' },
-  White: { light: '#ffffff', dark: '#ecf0f1' },
-  Black: { light: '#5d6d7e', dark: '#1c2833' },
-  Gray: { light: '#d5d8dc', dark: '#717d7e' },
-  Multi: { light: '#fadbd8', dark: '#d4e6f1' },
 };
 
 export default function MyBagScreen() {
@@ -202,17 +187,7 @@ export default function MyBagScreen() {
         }}>
         {/* Photo */}
         <RNView style={styles.photoContainer}>
-          {firstPhoto?.photo_url ? (
-            <Image source={{ uri: firstPhoto.photo_url }} style={styles.discPhoto} />
-          ) : item.color && COLOR_SHADES[item.color] ? (
-            <RNView style={[styles.twoToneCircle, { backgroundColor: COLOR_SHADES[item.color].light }]}>
-              <RNView style={[styles.twoToneInner, { backgroundColor: COLOR_SHADES[item.color].dark }]} />
-            </RNView>
-          ) : (
-            <RNView style={styles.photoPlaceholder}>
-              <FontAwesome name="circle-o" size={40} color="#555" />
-            </RNView>
-          )}
+          <DiscAvatar photoUrl={firstPhoto?.photo_url} color={item.color} size={60} />
         </RNView>
 
         {/* Disc Info */}
@@ -385,33 +360,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   photoContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    overflow: 'hidden',
     marginRight: 12,
-  },
-  discPhoto: {
-    width: '100%',
-    height: '100%',
-  },
-  photoPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#1a1a1a',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  twoToneCircle: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  twoToneInner: {
-    width: '65%',
-    height: '65%',
-    borderRadius: 100,
   },
   discInfo: {
     flex: 1,

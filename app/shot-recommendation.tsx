@@ -6,7 +6,6 @@ import {
   Pressable,
   View,
   Alert,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
@@ -18,6 +17,7 @@ import Colors from '@/constants/Colors';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import CameraWithOverlay from '@/components/CameraWithOverlay';
 import { useShotRecommendation } from '@/hooks/useShotRecommendation';
+import DiscAvatar from '@/components/DiscAvatar';
 
 export default function ShotRecommendationScreen() {
   const router = useRouter();
@@ -200,13 +200,9 @@ export default function ShotRecommendationScreen() {
 
           {/* Disc Info */}
           <View style={styles.discSection}>
-            {disc?.photo_url && (
-              <Image
-                source={{ uri: disc.photo_url }}
-                style={styles.discPhoto}
-                resizeMode="cover"
-              />
-            )}
+            <View style={styles.discAvatarWrapper}>
+              <DiscAvatar photoUrl={disc?.photo_url} color={disc?.color} size={80} />
+            </View>
             <View style={styles.discInfo}>
               <Text style={[styles.discName, dynamicStyles.text]}>
                 {disc?.name || 'Unknown Disc'}
@@ -472,10 +468,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  discPhoto: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  discAvatarWrapper: {
     marginRight: 16,
   },
   discInfo: {
