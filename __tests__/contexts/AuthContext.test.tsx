@@ -1166,4 +1166,273 @@ describe('AuthContext', () => {
       });
     });
   });
+
+  describe('Sentry error capture for OAuth flow', () => {
+    it('captures error to Sentry on signIn failure', async () => {
+      const { captureError } = require('../../lib/sentry');
+      const testError = new Error('Invalid credentials');
+      mockSignInWithPassword.mockResolvedValue({ error: testError });
+
+      let authContext: ReturnType<typeof useAuth> | null = null;
+
+      render(
+        <AuthProvider>
+          <TestComponent onAuth={(auth) => { authContext = auth; }} />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(authContext).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authContext?.signIn('test@example.com', 'wrongpass');
+      });
+
+      expect(captureError).toHaveBeenCalledWith(testError, {
+        operation: 'signIn',
+        email: 'test@example.com',
+      });
+    });
+
+    it('captures error to Sentry on signUp failure', async () => {
+      const { captureError } = require('../../lib/sentry');
+      const testError = new Error('Email already registered');
+      mockSignUp.mockResolvedValue({ error: testError });
+
+      let authContext: ReturnType<typeof useAuth> | null = null;
+
+      render(
+        <AuthProvider>
+          <TestComponent onAuth={(auth) => { authContext = auth; }} />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(authContext).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authContext?.signUp('test@example.com', 'password');
+      });
+
+      expect(captureError).toHaveBeenCalledWith(testError, {
+        operation: 'signUp',
+        email: 'test@example.com',
+      });
+    });
+
+    it('captures error to Sentry on signInWithGoogle failure', async () => {
+      const { captureError } = require('../../lib/sentry');
+      const testError = new Error('Google OAuth failed');
+      mockSignInWithOAuth.mockResolvedValue({ error: testError });
+
+      let authContext: ReturnType<typeof useAuth> | null = null;
+
+      render(
+        <AuthProvider>
+          <TestComponent onAuth={(auth) => { authContext = auth; }} />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(authContext).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authContext?.signInWithGoogle();
+      });
+
+      expect(captureError).toHaveBeenCalledWith(testError, {
+        operation: 'signInWithGoogle',
+        provider: 'google',
+      });
+    });
+
+    it('captures error to Sentry on OAuth deep link session failure', async () => {
+      const { captureError } = require('../../lib/sentry');
+      const Linking = require('expo-linking');
+      const testError = new Error('Invalid tokens');
+      const mockSetSession = jest.fn().mockResolvedValue({
+        data: null,
+        error: testError
+      });
+      const { supabase } = require('../../lib/supabase');
+      supabase.auth.setSession = mockSetSession;
+
+      let urlHandler: (event: { url: string }) => void;
+      Linking.addEventListener.mockImplementation((event: string, handler: any) => {
+        urlHandler = handler;
+        return { remove: jest.fn() };
+      });
+
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(Linking.addEventListener).toHaveBeenCalled();
+      });
+
+      const testUrl = 'com.discr.app://#access_token=invalid&refresh_token=invalid';
+
+      await act(async () => {
+        urlHandler({ url: testUrl });
+      });
+
+      await waitFor(() => {
+        expect(captureError).toHaveBeenCalledWith(testError, {
+          operation: 'oauthCallback',
+          hasAccessToken: true,
+          hasRefreshToken: true,
+        });
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('captures error to Sentry on deep link parsing failure', async () => {
+      const { captureError } = require('../../lib/sentry');
+      const Linking = require('expo-linking');
+
+      let urlHandler: (event: { url: string }) => void;
+      Linking.addEventListener.mockImplementation((event: string, handler: any) => {
+        urlHandler = handler;
+        return { remove: jest.fn() };
+      });
+
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(Linking.addEventListener).toHaveBeenCalled();
+      });
+
+      const testUrl = 'not-a-valid-url#access_token=test';
+
+      await act(async () => {
+        urlHandler({ url: testUrl });
+      });
+
+      await waitFor(() => {
+        expect(captureError).toHaveBeenCalledWith(expect.any(Error), {
+          operation: 'deepLinkParsing',
+          url: testUrl,
+        });
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('captures error to Sentry on getSession failure', async () => {
+      const { captureError } = require('../../lib/sentry');
+      const testError = new Error('Session fetch failed');
+      mockGetSession.mockRejectedValue(testError);
+
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const { getByTestId } = render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('loading').props.children).toBe('ready');
+      });
+
+      expect(captureError).toHaveBeenCalledWith(testError, {
+        operation: 'getSession',
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('does not capture error when signIn succeeds', async () => {
+      const { captureError } = require('../../lib/sentry');
+      captureError.mockClear();
+      mockSignInWithPassword.mockResolvedValue({ error: null });
+
+      let authContext: ReturnType<typeof useAuth> | null = null;
+
+      render(
+        <AuthProvider>
+          <TestComponent onAuth={(auth) => { authContext = auth; }} />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(authContext).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authContext?.signIn('test@example.com', 'password');
+      });
+
+      expect(captureError).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        operation: 'signIn',
+      }));
+    });
+
+    it('does not capture error when signUp succeeds', async () => {
+      const { captureError } = require('../../lib/sentry');
+      captureError.mockClear();
+      mockSignUp.mockResolvedValue({ error: null });
+
+      let authContext: ReturnType<typeof useAuth> | null = null;
+
+      render(
+        <AuthProvider>
+          <TestComponent onAuth={(auth) => { authContext = auth; }} />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(authContext).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authContext?.signUp('test@example.com', 'password');
+      });
+
+      expect(captureError).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        operation: 'signUp',
+      }));
+    });
+
+    it('does not capture error when signInWithGoogle succeeds', async () => {
+      const { captureError } = require('../../lib/sentry');
+      captureError.mockClear();
+      mockSignInWithOAuth.mockResolvedValue({ error: null });
+
+      let authContext: ReturnType<typeof useAuth> | null = null;
+
+      render(
+        <AuthProvider>
+          <TestComponent onAuth={(auth) => { authContext = auth; }} />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(authContext).not.toBeNull();
+      });
+
+      await act(async () => {
+        await authContext?.signInWithGoogle();
+      });
+
+      expect(captureError).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        operation: 'signInWithGoogle',
+      }));
+    });
+  });
 });
