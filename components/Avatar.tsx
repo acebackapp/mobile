@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ViewStyle, ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
 import Colors from '@/constants/Colors';
@@ -22,7 +22,7 @@ interface AvatarProps {
 export function Avatar({ avatarUrl, name, size = 40, style }: AvatarProps) {
   const [imageError, setImageError] = useState(false);
 
-  const getInitials = (displayName?: string): string => {
+  const getInitials = useCallback((displayName?: string): string => {
     if (!displayName) return '?';
 
     // Handle @username format
@@ -37,18 +37,22 @@ export function Avatar({ avatarUrl, name, size = 40, style }: AvatarProps) {
     }
 
     return displayName.charAt(0).toUpperCase();
-  };
+  }, []);
 
-  const containerStyle = {
+  const containerStyle = useMemo(() => ({
     width: size,
     height: size,
     borderRadius: size / 2,
-  };
+  }), [size]);
 
-  const textSize = size * 0.4;
+  const textSize = useMemo(() => size * 0.4, [size]);
 
   // Accessibility label based on name
-  const accessibilityLabel = name ? `${name}'s avatar` : 'User avatar';
+  const accessibilityLabel = useMemo(() => name ? `${name}'s avatar` : 'User avatar', [name]);
+
+  const handleImageError = useCallback(() => setImageError(true), []);
+
+  const initials = useMemo(() => getInitials(name), [getInitials, name]);
 
   // Show image if URL exists and hasn't errored
   if (avatarUrl && !imageError) {
@@ -56,7 +60,7 @@ export function Avatar({ avatarUrl, name, size = 40, style }: AvatarProps) {
       <Image
         source={{ uri: avatarUrl }}
         style={[styles.image, containerStyle, style as ImageStyle]}
-        onError={() => setImageError(true)}
+        onError={handleImageError}
         cachePolicy="memory-disk"
         transition={200}
         accessibilityRole="image"
@@ -73,7 +77,7 @@ export function Avatar({ avatarUrl, name, size = 40, style }: AvatarProps) {
       accessibilityLabel={accessibilityLabel}
     >
       <Text style={[styles.initials, { fontSize: textSize }]}>
-        {getInitials(name)}
+        {initials}
       </Text>
     </View>
   );

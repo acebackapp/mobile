@@ -12,7 +12,7 @@ import { Text, View } from '@/components/Themed';
 import { useAuth } from '@/contexts/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Colors from '@/constants/Colors';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -48,6 +48,13 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   disc_recovered: '#10b981',
   disc_surrendered: '#9B59B6',
 };
+
+// Memoized separator component for FlatList
+const ItemSeparator = memo(function ItemSeparator() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  return <RNView style={[styles.separator, isDark && styles.separatorDark]} />;
+});
 
 export default function NotificationsScreen() {
   const { user, session } = useAuth();
@@ -198,7 +205,7 @@ export default function NotificationsScreen() {
     }
   };
 
-  const formatTimeAgo = (dateString: string): string => {
+  const formatTimeAgo = useCallback((dateString: string): string => {
     const now = new Date();
     const date = new Date(dateString);
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -208,7 +215,7 @@ export default function NotificationsScreen() {
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
     if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
     return date.toLocaleDateString();
-  };
+  }, []);
 
   // istanbul ignore next -- Swipeable gesture handling requires device testing
   const SwipeableNotification = ({ item }: { item: Notification }) => {
@@ -306,11 +313,11 @@ export default function NotificationsScreen() {
     );
   };
 
-  const renderNotification = ({ item }: { item: Notification }) => {
+  const renderNotification = useCallback(({ item }: { item: Notification }) => {
     return <SwipeableNotification item={item} />;
-  };
+  }, []);
 
-  const renderEmpty = () => (
+  const renderEmpty = useCallback(() => (
     <View style={styles.emptyContainer}>
       <FontAwesome
         name="bell-o"
@@ -324,7 +331,9 @@ export default function NotificationsScreen() {
         You'll be notified when someone finds your disc or proposes a meetup
       </Text>
     </View>
-  );
+  ), [isDark]);
+
+  const keyExtractor = useCallback((item: Notification) => item.id, []);
 
   if (loading) {
     return (
@@ -356,7 +365,7 @@ export default function NotificationsScreen() {
       <FlatList
         data={notifications}
         renderItem={renderNotification}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         contentContainerStyle={notifications.length === 0 ? styles.emptyList : undefined}
         ListEmptyComponent={renderEmpty}
         refreshControl={
@@ -366,9 +375,7 @@ export default function NotificationsScreen() {
             tintColor={Colors.violet.primary}
           />
         }
-        ItemSeparatorComponent={() => (
-          <RNView style={[styles.separator, isDark && styles.separatorDark]} />
-        )}
+        ItemSeparatorComponent={ItemSeparator}
       />
     </View>
   );

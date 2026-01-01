@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -20,7 +21,7 @@ export default function DiscPreferencesSection({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const handleThrowingHandPress = () => {
+  const handleThrowingHandPress = useCallback(() => {
     Alert.alert(
       'Throwing Hand',
       'Select your primary throwing hand for flight path visualization',
@@ -36,7 +37,7 @@ export default function DiscPreferencesSection({
         { text: 'Cancel', style: 'cancel' },
       ]
     );
-  };
+  }, [onThrowingHandChange]);
 
   return (
     <View style={styles.section}>

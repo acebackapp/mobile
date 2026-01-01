@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -71,7 +71,7 @@ export function DiscAutocomplete({
     }
   }, [value, results]);
 
-  const dynamicStyles = {
+  const dynamicStyles = useMemo(() => ({
     input: {
       borderColor: error ? '#ff4444' : isDark ? '#333' : '#ccc',
       backgroundColor: isDark ? '#1a1a1a' : '#fff',
@@ -89,7 +89,7 @@ export function DiscAutocomplete({
     flightNumbers: {
       color: isDark ? '#888' : '#888',
     },
-  };
+  }), [error, isDark]);
 
   return (
     <View style={styles.container}>

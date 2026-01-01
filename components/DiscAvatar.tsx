@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -28,13 +29,23 @@ export default function DiscAvatar({ photoUrl, color, size = 60 }: DiscAvatarPro
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const containerStyle = {
+  const containerStyle = useMemo(() => ({
     width: size,
     height: size,
     borderRadius: size / 2,
-  };
+  }), [size]);
 
-  const innerSize = size * 0.65;
+  const innerSize = useMemo(() => size * 0.65, [size]);
+
+  const innerStyle = useMemo(() => color && COLOR_SHADES[color] ? ({
+    backgroundColor: COLOR_SHADES[color].dark,
+    width: innerSize,
+    height: innerSize,
+    borderRadius: innerSize / 2,
+  }) : null, [color, innerSize]);
+
+  const placeholderBgColor = useMemo(() => isDark ? '#1a1a1a' : '#e0e0e0', [isDark]);
+  const placeholderIconColor = useMemo(() => isDark ? '#555' : '#999', [isDark]);
 
   if (photoUrl) {
     return (
@@ -44,19 +55,14 @@ export default function DiscAvatar({ photoUrl, color, size = 60 }: DiscAvatarPro
     );
   }
 
-  if (color && COLOR_SHADES[color]) {
+  if (color && COLOR_SHADES[color] && innerStyle) {
     return (
       <View style={[styles.container, containerStyle]}>
         <View style={[styles.twoToneCircle, { backgroundColor: COLOR_SHADES[color].light }]}>
           <View
             style={[
               styles.twoToneInner,
-              {
-                backgroundColor: COLOR_SHADES[color].dark,
-                width: innerSize,
-                height: innerSize,
-                borderRadius: innerSize / 2,
-              },
+              innerStyle,
             ]}
           />
         </View>
@@ -66,8 +72,8 @@ export default function DiscAvatar({ photoUrl, color, size = 60 }: DiscAvatarPro
 
   return (
     <View style={[styles.container, containerStyle]}>
-      <View style={[styles.placeholder, { backgroundColor: isDark ? '#1a1a1a' : '#e0e0e0' }]}>
-        <FontAwesome name="circle-o" size={size * 0.65} color={isDark ? '#555' : '#999'} />
+      <View style={[styles.placeholder, { backgroundColor: placeholderBgColor }]}>
+        <FontAwesome name="circle-o" size={innerSize} color={placeholderIconColor} />
       </View>
     </View>
   );
