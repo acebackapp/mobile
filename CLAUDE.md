@@ -117,29 +117,91 @@ pre-commit autoupdate           # Update hook versions
 
 ### Test-Driven Development (TDD) - MANDATORY
 
-**CRITICAL:** All new code MUST be developed using Test-Driven Development:
+**CRITICAL:** All new code MUST be developed using Test-Driven Development.
+This is NON-NEGOTIABLE. Writing implementation before tests is FORBIDDEN.
 
-1. **Write tests FIRST** - Before writing any implementation code, write tests
-1. **Red-Green-Refactor cycle:**
-   - RED: Write a failing test for the new functionality
-   - GREEN: Write minimal code to make the test pass
-   - REFACTOR: Clean up while keeping tests green
-1. **Test coverage requirements:**
-   - All components must have unit tests
-   - All hooks must be tested
-   - All API interactions must be tested
-   - All user flows must have integration tests
-1. **Test file locations:**
-   - Component tests: `__tests__/<component>.test.tsx`
-   - Hook tests: `__tests__/hooks/<hook>.test.ts`
-   - Integration tests: `__tests__/integration/`
-1. **Running tests:**
+#### The TDD Workflow (MUST FOLLOW)
 
-   ```bash
-   npm test                    # Run all tests
-   npm test -- --watch         # Watch mode
-   npm test -- --coverage      # With coverage report
-   ```
+1. **STOP** - Before writing ANY implementation code, ask yourself: "Do I have a
+   failing test for this?" If no, write the test first.
+
+2. **RED Phase** - Write a failing test:
+   - Create the test file FIRST if it doesn't exist
+   - Write a test that describes the expected behavior
+   - Run the test and VERIFY it fails (this proves the test is valid)
+   - If the test passes without implementation, the test is wrong
+
+3. **GREEN Phase** - Write minimal implementation:
+   - Write ONLY enough code to make the failing test pass
+   - Do not add extra functionality "while you're there"
+   - Run the test and verify it passes
+
+4. **REFACTOR Phase** - Clean up while tests stay green:
+   - Improve code structure without changing behavior
+   - Run tests after each change to ensure they still pass
+
+5. **REPEAT** - Go back to step 2 for the next piece of functionality
+
+#### Coverage Requirements - 100% BY DESIGN
+
+TDD naturally produces 100% coverage because:
+
+- Every line of code exists to make a test pass
+- No code is written without a corresponding test
+- If coverage is below 100%, you skipped TDD
+
+**If you find yourself with <100% coverage, you violated TDD. Fix it immediately.**
+
+#### Verification Checklist (RUN BEFORE EVERY COMMIT)
+
+```bash
+# 1. Run tests with coverage
+npm test -- --coverage --watchAll=false
+
+# 2. Check coverage report - MUST be 100% for new code
+# Coverage summary will be printed to console
+
+# 3. If any new code is uncovered, write tests FIRST then re-run
+```
+
+#### Common TDD Violations (DO NOT DO THESE)
+
+❌ "I'll write the component first, then add tests" - WRONG
+❌ "Tests are passing, I'll add coverage later" - WRONG
+❌ "This is simple, it doesn't need tests" - WRONG
+❌ "I'll write all the code, then write all the tests" - WRONG
+
+✅ Write ONE failing test → Write code to pass it → Repeat
+
+#### Test File Locations
+
+- Component tests: `__tests__/<component>.test.tsx`
+- Hook tests: `__tests__/hooks/<hook>.test.tsx`
+- Integration tests: `__tests__/integration/`
+- Screen tests: `__tests__/screens/`
+
+#### Example TDD Session
+
+```bash
+# Step 1: Create test file FIRST
+touch __tests__/hooks/useMyHook.test.tsx
+
+# Step 2: Write failing test
+# ... write test that imports hook that doesn't exist yet ...
+
+# Step 3: Run test - it MUST fail
+npm test -- useMyHook --watchAll=false
+# Expected: FAIL (module not found or assertion fails)
+
+# Step 4: Write minimal implementation to pass
+# ... write just enough code ...
+
+# Step 5: Run test again - it MUST pass now
+npm test -- useMyHook --watchAll=false
+# Expected: PASS
+
+# Step 6: Repeat for next test case
+```
 
 **DO NOT write implementation code without tests. This is non-negotiable.**
 
