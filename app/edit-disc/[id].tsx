@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
@@ -153,7 +154,7 @@ export default function EditDiscScreen() {
   }, [id]);
 
   const fetchDiscData = async () => {
-    console.log('fetchDiscData called for disc:', id);
+    logger.debug('fetchDiscData called for disc:', id);
     try {
       setLoading(true);
 
@@ -162,7 +163,7 @@ export default function EditDiscScreen() {
       } = await supabase.auth.getSession();
 
       if (!session) {
-        console.error('No session found');
+        logger.error('No session found');
         return;
       }
 
@@ -209,7 +210,7 @@ export default function EditDiscScreen() {
         ? disc.photos.filter((p: DiscPhoto) => p.photo_url && p.photo_url.trim() !== '')
         : [];
 
-      console.log('Setting form values:', {
+      logger.debug('Setting form values:', {
         manufacturer: manufacturerValue,
         mold: moldValue,
         category: categoryValue,
@@ -239,7 +240,7 @@ export default function EditDiscScreen() {
       setNotes(notesValue);
       setExistingPhotos(photosValue);
 
-      console.log('Disc data loaded successfully');
+      logger.debug('Disc data loaded successfully');
     } catch (error) {
       handleError(error, { operation: 'fetch-disc-data' });
     } finally {
@@ -359,15 +360,15 @@ export default function EditDiscScreen() {
 
               if (!deleteResponse.ok) {
                 const deleteError = await deleteResponse.json();
-                console.error('Failed to delete photo:', deleteError);
+                logger.error('Failed to delete photo:', deleteError);
                 Alert.alert('Error', 'Failed to delete photo. Please try again.');
                 // Restore the photo to the UI if deletion failed
                 fetchDiscData();
               } else {
-                console.log('Photo deleted successfully');
+                logger.debug('Photo deleted successfully');
               }
             } catch (error) {
-              console.error('Error deleting photo:', error);
+              logger.error('Error deleting photo:', error);
               Alert.alert('Error', 'Failed to delete photo. Please try again.');
               // Restore the photo to the UI if deletion failed
               fetchDiscData();
@@ -427,7 +428,7 @@ export default function EditDiscScreen() {
         notes: notes.trim() || undefined,
       };
 
-      console.log('Updating disc with:', JSON.stringify(requestBody, null, 2));
+      logger.debug('Updating disc with:', JSON.stringify(requestBody, null, 2));
 
       // Call update-disc edge function
       const response = await fetch(
@@ -446,8 +447,8 @@ export default function EditDiscScreen() {
 
       if (!response.ok) {
         const errorMessage = JSON.stringify(data, null, 2);
-        console.error('❌ API Error Response:', errorMessage);
-        console.error('❌ Response status:', response.status);
+        logger.error('❌ API Error Response:', errorMessage);
+        logger.error('❌ Response status:', response.status);
         Alert.alert('API Error', `Status: ${response.status}\n\n${errorMessage}`, [
           { text: 'OK' },
         ]);
@@ -457,7 +458,7 @@ export default function EditDiscScreen() {
       // istanbul ignore next -- Photo upload requires device/emulator testing
       // Upload new photos if any
       if (newPhotos.length > 0) {
-        console.log(`Uploading ${newPhotos.length} new photos for disc ${id}`);
+        logger.debug(`Uploading ${newPhotos.length} new photos for disc ${id}`);
 
         for (let i = 0; i < newPhotos.length; i++) {
           const photoUri = newPhotos[i];
@@ -491,12 +492,12 @@ export default function EditDiscScreen() {
 
             if (!photoResponse.ok) {
               const photoError = await photoResponse.json();
-              console.error(`Failed to upload photo ${i + 1}:`, photoError);
+              logger.error(`Failed to upload photo ${i + 1}:`, photoError);
             } else {
-              console.log(`✅ Photo ${i + 1} uploaded successfully`);
+              logger.debug(`✅ Photo ${i + 1} uploaded successfully`);
             }
           } catch (photoError) {
-            console.error(`Error uploading photo ${i + 1}:`, photoError);
+            logger.error(`Error uploading photo ${i + 1}:`, photoError);
           }
         }
       }

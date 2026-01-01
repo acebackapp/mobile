@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useCallback, ComponentProps } from 'react';
 import {
   StyleSheet,
@@ -170,7 +171,7 @@ export default function OrderDetailScreen() {
       } = await supabase.auth.getSession();
 
       if (!session) {
-        console.error('No session found');
+        logger.error('No session found');
         return;
       }
 
@@ -192,7 +193,7 @@ export default function OrderDetailScreen() {
       const data = await response.json();
       setOrder(data.order);
     } catch (error) {
-      console.error('Error fetching order:', error);
+      logger.error('Error fetching order:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);

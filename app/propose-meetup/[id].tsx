@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
@@ -62,7 +63,7 @@ export default function ProposeMeetupScreen() {
         setUserRole(data.user_role);
       }
     } catch (error) {
-      console.error('Error fetching user role:', error);
+      logger.error('Error fetching user role:', error);
     }
   }, [recoveryEventId]);
 

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { StyleSheet, TouchableOpacity, Alert, ScrollView, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { Text, View } from '@/components/Themed';
@@ -170,7 +171,7 @@ export default function ProfileScreen() {
         }
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      logger.error('Error fetching profile:', error);
     } finally {
       setLoading(false);
     }
@@ -191,7 +192,7 @@ export default function ProfileScreen() {
         setImageError(false);
       }
     } catch (error) {
-      console.error('Error fetching avatar signed URL:', error);
+      logger.error('Error fetching avatar signed URL:', error);
     }
   };
 
@@ -471,7 +472,7 @@ export default function ProfileScreen() {
         setMyDiscsFoundByOthers(count);
       }
     } catch (error) {
-      console.error('Error fetching my discs found by others:', error);
+      logger.error('Error fetching my discs found by others:', error);
     }
   };
 
@@ -489,7 +490,7 @@ export default function ProfileScreen() {
         setDiscsReturned(count);
       }
     } catch (error) {
-      console.error('Error fetching discs returned:', error);
+      logger.error('Error fetching discs returned:', error);
     }
   };
 
@@ -508,7 +509,7 @@ export default function ProfileScreen() {
         setDiscsFound(count);
       }
     } catch (error) {
-      console.error('Error fetching discs found:', error);
+      logger.error('Error fetching discs found:', error);
     }
   };
 
@@ -545,7 +546,7 @@ export default function ProfileScreen() {
         .order('created_at', { ascending: false });
 
       if (recoveriesError) {
-        console.error('Error fetching recoveries:', recoveriesError);
+        logger.error('Error fetching recoveries:', recoveriesError);
         setActiveRecoveries([]);
         return;
       }
@@ -563,7 +564,7 @@ export default function ProfileScreen() {
 
       setActiveRecoveries(transformedRecoveries);
     } catch (error) {
-      console.error('Error fetching active recoveries:', error);
+      logger.error('Error fetching active recoveries:', error);
       setActiveRecoveries([]);
     } finally {
       setLoadingRecoveries(false);
@@ -594,7 +595,7 @@ export default function ProfileScreen() {
       );
 
       if (!response.ok) {
-        console.error('Error fetching my finds:', await response.text());
+        logger.error('Error fetching my finds:', await response.text());
         setMyFinds([]);
         return;
       }
@@ -616,7 +617,7 @@ export default function ProfileScreen() {
 
       setMyFinds(transformedFinds);
     } catch (error) {
-      console.error('Error fetching my finds:', error);
+      logger.error('Error fetching my finds:', error);
       setMyFinds([]);
     } finally {
       setLoadingFinds(false);
@@ -662,7 +663,7 @@ export default function ProfileScreen() {
         }
       }
     } catch (error) {
-      console.error('Error fetching shipping address:', error);
+      logger.error('Error fetching shipping address:', error);
     } finally {
       setLoadingShippingAddress(false);
     }
@@ -826,7 +827,7 @@ export default function ProfileScreen() {
           );
           setGravatarUrl(`https://www.gravatar.com/avatar/${emailHash}?s=200&d=404`);
         } catch (error) {
-          console.error('Error generating Gravatar URL:', error);
+          logger.error('Error generating Gravatar URL:', error);
           setImageError(true);
         }
       }
