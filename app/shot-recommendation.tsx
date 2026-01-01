@@ -36,10 +36,12 @@ export default function ShotRecommendationScreen() {
 
   // Fetch throwing hand preference
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchThrowingHand() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user || !isMounted) return;
 
         const { data, error: profileError } = await supabase
           .from('profiles')
@@ -47,7 +49,7 @@ export default function ShotRecommendationScreen() {
           .eq('id', user.id)
           .single();
 
-        if (!profileError && data?.throwing_hand) {
+        if (!profileError && data?.throwing_hand && isMounted) {
           setThrowingHand(data.throwing_hand as 'right' | 'left');
         }
       } catch {
@@ -56,6 +58,10 @@ export default function ShotRecommendationScreen() {
     }
 
     fetchThrowingHand();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Shot recommendation hook
