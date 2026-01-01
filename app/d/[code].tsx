@@ -6,6 +6,21 @@ import { supabase } from '@/lib/supabase';
 import Colors from '@/constants/Colors';
 
 /**
+ * QR code validation pattern.
+ * Valid codes are 6-10 alphanumeric characters only.
+ */
+const QR_CODE_PATTERN = /^[A-Z0-9]{6,10}$/;
+
+/**
+ * Validates a QR code format.
+ * @param code The QR code to validate (will be uppercased)
+ * @returns true if the code is valid, false otherwise
+ */
+export function isValidQRCode(code: string): boolean {
+  return QR_CODE_PATTERN.test(code.toUpperCase());
+}
+
+/**
  * Deep link handler for QR code scans.
  * URL format: com.discr.app://d/ABC123 or https://discrapp.com/d/ABC123
  *
@@ -28,7 +43,15 @@ export default function DeepLinkHandler() {
       return;
     }
 
-    handleQRCode(code.toUpperCase());
+    const upperCode = code.toUpperCase();
+
+    // Validate QR code format before making API call
+    if (!isValidQRCode(upperCode)) {
+      setError('Invalid QR code format');
+      return;
+    }
+
+    handleQRCode(upperCode);
   }, [code, authLoading, user]);
 
   const handleQRCode = async (qrCode: string) => {
