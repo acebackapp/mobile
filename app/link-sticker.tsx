@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
@@ -85,7 +86,7 @@ export default function LinkStickerScreen() {
         setDiscs(availableDiscs);
       }
     } catch (error) {
-      console.error('Error fetching discs:', error);
+      logger.error('Error fetching discs:', error);
     } finally {
       setLoadingDiscs(false);
     }

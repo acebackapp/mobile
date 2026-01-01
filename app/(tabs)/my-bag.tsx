@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
@@ -105,7 +106,7 @@ export default function MyBagScreen() {
       } = await supabase.auth.getSession();
 
       if (!session) {
-        console.error('No session found');
+        logger.error('No session found');
         return;
       }
 

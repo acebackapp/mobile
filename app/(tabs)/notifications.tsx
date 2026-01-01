@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import {
   StyleSheet,
   TouchableOpacity,
@@ -80,7 +81,7 @@ export default function NotificationsScreen() {
       );
 
       if (!response.ok) {
-        console.error('Failed to fetch notifications:', response.status);
+        logger.error('Failed to fetch notifications:', response.status);
         return;
       }
 
@@ -88,7 +89,7 @@ export default function NotificationsScreen() {
       setNotifications(data.notifications || []);
       setUnreadCount(data.unread_count || 0);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      logger.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -121,7 +122,7 @@ export default function NotificationsScreen() {
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       // istanbul ignore next -- Error handling tested via integration tests
-      console.error('Error marking notification as read:', error);
+      logger.error('Error marking notification as read:', error);
     }
   };
 
@@ -139,7 +140,7 @@ export default function NotificationsScreen() {
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      logger.error('Error marking all notifications as read:', error);
     }
   };
 
@@ -160,7 +161,7 @@ export default function NotificationsScreen() {
         body: { dismiss_all: true },
       });
     } catch (error) {
-      console.error('Error dismissing all notifications:', error);
+      logger.error('Error dismissing all notifications:', error);
       // Restore state if failed
       setNotifications(previousNotifications);
       setUnreadCount(previousUnreadCount);
@@ -185,7 +186,7 @@ export default function NotificationsScreen() {
         body: { notification_id: notificationId },
       });
     } catch (error) {
-      console.error('Error dismissing notification:', error);
+      logger.error('Error dismissing notification:', error);
       // Refetch to restore state if failed
       fetchNotifications();
     }

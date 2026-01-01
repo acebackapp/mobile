@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
@@ -108,7 +109,7 @@ export default function OrderStickersScreen() {
         setSaveAsDefault(true);
       }
     } catch (error) {
-      console.error('Error fetching default address:', error);
+      logger.error('Error fetching default address:', error);
     } finally {
       setLoadingAddress(false);
     }
@@ -303,7 +304,7 @@ export default function OrderStickersScreen() {
 
       if (!response.ok) {
         // API error - let user proceed with unvalidated address
-        console.error('USPS validation API error:', response.status);
+        logger.error('USPS validation API error:', response.status);
         return { valid: true };
       }
 
@@ -346,7 +347,7 @@ export default function OrderStickersScreen() {
       // Valid with no corrections needed
       return { valid: true };
     } catch (error) {
-      console.error('USPS validation error:', error);
+      logger.error('USPS validation error:', error);
       // Network error - let user proceed
       return { valid: true };
     }
@@ -392,11 +393,11 @@ export default function OrderStickersScreen() {
           );
 
           if (!saveAddressResponse.ok) {
-            console.error('Failed to save default address');
+            logger.error('Failed to save default address');
             // Continue with order - don't block checkout for address save failure
           }
         } catch (saveError) {
-          console.error('Error saving default address:', saveError);
+          logger.error('Error saving default address:', saveError);
           // Continue with order
         }
       }
@@ -499,7 +500,7 @@ export default function OrderStickersScreen() {
       // Address is valid and matches - proceed with checkout
       await proceedWithCheckout(address);
     } catch (error) {
-      console.error('Validation error:', error);
+      logger.error('Validation error:', error);
       // On error, proceed with original address
       await proceedWithCheckout(address);
     } finally {

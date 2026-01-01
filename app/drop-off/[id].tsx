@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
@@ -67,7 +68,7 @@ export default function DropOffScreen() {
         }
       }
     } catch (error) {
-      console.error('Error fetching recovery details:', error);
+      logger.error('Error fetching recovery details:', error);
     }
   }, [recoveryEventId]);
 
@@ -175,13 +176,13 @@ export default function DropOffScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Upload error:', data.error);
+        logger.error('Upload error:', data.error);
         return null;
       }
 
       return data.photo_url;
     } catch (error) {
-      console.error('Error uploading photo:', error);
+      logger.error('Error uploading photo:', error);
       return null;
     }
   };

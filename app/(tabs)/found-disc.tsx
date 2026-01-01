@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
@@ -136,7 +137,7 @@ export default function FoundDiscScreen() {
         setPendingRecoveries(data);
       }
     } catch (error) {
-      console.error('Error fetching pending recoveries:', error);
+      logger.error('Error fetching pending recoveries:', error);
     } finally {
       setLoadingPending(false);
     }
@@ -181,7 +182,7 @@ export default function FoundDiscScreen() {
 
       // istanbul ignore next -- Error handling tested via integration tests
       if (recoveriesError) {
-        console.error('Error fetching my discs being recovered:', recoveriesError);
+        logger.error('Error fetching my discs being recovered:', recoveriesError);
         setMyDiscsBeingRecovered([]);
         return;
       }
@@ -204,7 +205,7 @@ export default function FoundDiscScreen() {
 
       setMyDiscsBeingRecovered(transformedRecoveries);
     } catch (error) {
-      console.error('Error fetching my discs being recovered:', error);
+      logger.error('Error fetching my discs being recovered:', error);
       setMyDiscsBeingRecovered([]);
     } finally {
       setLoadingMyDiscs(false);
@@ -366,7 +367,7 @@ export default function FoundDiscScreen() {
 
       setScreenState('found');
     } catch (error) {
-      console.error('Lookup error:', error);
+      logger.error('Lookup error:', error);
       setErrorMessage('Failed to look up disc. Please try again.');
       setScreenState('error');
     }
@@ -416,7 +417,7 @@ export default function FoundDiscScreen() {
       setScreenState('claim_success');
     } catch (error) {
       // istanbul ignore next -- Error catch tested via integration tests
-      console.error('Claim error:', error);
+      logger.error('Claim error:', error);
       setErrorMessage('Failed to claim QR code. Please try again.');
       setScreenState('error');
     }
@@ -472,7 +473,7 @@ export default function FoundDiscScreen() {
       fetchPendingRecoveries();
     } catch (error) {
       // istanbul ignore next -- Error catch tested via integration tests
-      console.error('Report error:', error);
+      logger.error('Report error:', error);
       setErrorMessage('Failed to report found disc. Please try again.');
       setScreenState('error');
     }

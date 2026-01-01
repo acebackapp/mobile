@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import {
   StyleSheet,
@@ -147,7 +148,7 @@ export default function RecoveryDetailScreen() {
       setRecovery(data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching recovery:', err);
+      logger.error('Error fetching recovery:', err);
       setError(err instanceof Error ? err.message : 'Failed to load recovery details');
     } finally {
       setLoading(false);

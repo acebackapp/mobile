@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
@@ -195,7 +196,7 @@ export default function AddDiscScreen() {
       await processScannedQrCode(scannedCode);
     } catch (error) {
       setQrError('Failed to process QR code. Please try again.');
-      console.error('QR scan error:', error);
+      logger.error('QR scan error:', error);
       handleError(error, { operation: 'handle-barcode-scan' });
     } finally {
       isProcessingQr.current = false;
@@ -299,7 +300,7 @@ export default function AddDiscScreen() {
         );
       }
     } catch (error) {
-      console.error('QR scan error:', error);
+      logger.error('QR scan error:', error);
       handleError(error, { operation: 'process-qr-code' });
     } finally {
       setQrLoading(false);
@@ -455,7 +456,7 @@ export default function AddDiscScreen() {
         );
       }
     } catch (err) {
-      console.error('AI identification error:', err);
+      logger.error('AI identification error:', err);
       Alert.alert(
         'Identification Failed',
         'An unexpected error occurred. Please try again or enter details manually.',
@@ -554,7 +555,7 @@ export default function AddDiscScreen() {
         ai_identification_log_id: aiLogId || undefined, // Track AI identification for learning
       };
 
-      console.log('Creating disc with:', JSON.stringify(requestBody, null, 2));
+      logger.debug('Creating disc with:', JSON.stringify(requestBody, null, 2));
 
       // Call create-disc edge function
       const response = await fetch(
@@ -573,8 +574,8 @@ export default function AddDiscScreen() {
 
       if (!response.ok) {
         const errorMessage = JSON.stringify(data, null, 2);
-        console.error('❌ API Error Response:', errorMessage);
-        console.error('❌ Response status:', response.status);
+        logger.error('❌ API Error Response:', errorMessage);
+        logger.error('❌ Response status:', response.status);
         Alert.alert(
           'API Error',
           `Status: ${response.status}\n\n${errorMessage}`,
@@ -585,7 +586,7 @@ export default function AddDiscScreen() {
 
       // istanbul ignore next -- Photo upload tested via integration tests
       if (photos.length > 0) {
-        console.log(`Uploading ${photos.length} photos for disc ${data.id}`);
+        logger.debug(`Uploading ${photos.length} photos for disc ${data.id}`);
 
         for (let i = 0; i < photos.length; i++) {
           const photoUri = photos[i];
@@ -620,13 +621,13 @@ export default function AddDiscScreen() {
 
             if (!photoResponse.ok) {
               const photoError = await photoResponse.json();
-              console.error(`Failed to upload photo ${i + 1}:`, photoError);
+              logger.error(`Failed to upload photo ${i + 1}:`, photoError);
               // Continue with other photos even if one fails
             } else {
-              console.log(`✅ Photo ${i + 1} uploaded successfully`);
+              logger.debug(`✅ Photo ${i + 1} uploaded successfully`);
             }
           } catch (photoError) {
-            console.error(`Error uploading photo ${i + 1}:`, photoError);
+            logger.error(`Error uploading photo ${i + 1}:`, photoError);
             // Continue with other photos even if one fails
           }
         }
@@ -639,7 +640,7 @@ export default function AddDiscScreen() {
         },
       ]);
     } catch (error) {
-      console.error('Error creating disc:', error);
+      logger.error('Error creating disc:', error);
       handleError(error, { operation: 'create-disc' });
     } finally {
       setLoading(false);
