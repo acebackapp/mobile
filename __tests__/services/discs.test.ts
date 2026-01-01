@@ -11,7 +11,38 @@ jest.mock('@/services/baseService', () => ({
   apiRequest: jest.fn(),
 }));
 
+// Mock Sentry
+jest.mock('@/lib/sentry', () => ({
+  Sentry: {
+    captureException: jest.fn(),
+  },
+  captureError: jest.fn(),
+}));
+
 const mockApiRequest = apiRequest as jest.MockedFunction<typeof apiRequest>;
+
+// Helper to create a valid disc mock
+function createMockDisc(overrides: Partial<{
+  id: string;
+  name: string;
+  brand?: string;
+  weight?: number;
+  color?: string;
+  photo_url?: string;
+  qr_code_id?: string | null;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+}> = {}) {
+  return {
+    id: 'disc-1',
+    name: 'Destroyer',
+    owner_id: 'user-123',
+    created_at: '2024-01-15T10:30:00Z',
+    updated_at: '2024-01-15T10:30:00Z',
+    ...overrides,
+  };
+}
 
 describe('discService', () => {
   beforeEach(() => {
@@ -21,8 +52,8 @@ describe('discService', () => {
   describe('getAll', () => {
     it('fetches all discs for the current user', async () => {
       const mockDiscs = [
-        { id: 'disc-1', name: 'Destroyer', brand: 'Innova' },
-        { id: 'disc-2', name: 'Buzzz', brand: 'Discraft' },
+        createMockDisc({ id: 'disc-1', name: 'Destroyer', brand: 'Innova' }),
+        createMockDisc({ id: 'disc-2', name: 'Buzzz', brand: 'Discraft' }),
       ];
       mockApiRequest.mockResolvedValueOnce(mockDiscs);
 
@@ -47,7 +78,11 @@ describe('discService', () => {
 
   describe('getById', () => {
     it('fetches a single disc by ID', async () => {
-      const mockDisc = { id: 'disc-1', name: 'Destroyer', brand: 'Innova' };
+      const mockDisc = createMockDisc({
+        id: 'disc-1',
+        name: 'Destroyer',
+        brand: 'Innova',
+      });
       mockApiRequest.mockResolvedValueOnce(mockDisc);
 
       const result = await discService.getById('disc-1');
@@ -85,7 +120,12 @@ describe('discService', () => {
   describe('create', () => {
     it('creates a new disc', async () => {
       const discData = { name: 'Destroyer', brand: 'Innova', weight: 175 };
-      const createdDisc = { id: 'new-disc', ...discData };
+      const createdDisc = createMockDisc({
+        id: 'new-disc',
+        name: 'Destroyer',
+        brand: 'Innova',
+        weight: 175,
+      });
       mockApiRequest.mockResolvedValueOnce(createdDisc);
 
       const result = await discService.create(discData);
@@ -102,7 +142,11 @@ describe('discService', () => {
   describe('update', () => {
     it('updates an existing disc', async () => {
       const updates = { name: 'Updated Name' };
-      const updatedDisc = { id: 'disc-1', name: 'Updated Name', brand: 'Innova' };
+      const updatedDisc = createMockDisc({
+        id: 'disc-1',
+        name: 'Updated Name',
+        brand: 'Innova',
+      });
       mockApiRequest.mockResolvedValueOnce(updatedDisc);
 
       const result = await discService.update('disc-1', updates);
@@ -131,7 +175,11 @@ describe('discService', () => {
 
   describe('linkQrCode', () => {
     it('links a QR code to a disc', async () => {
-      const linkedDisc = { id: 'disc-1', qr_code_id: 'qr-123' };
+      const linkedDisc = createMockDisc({
+        id: 'disc-1',
+        name: 'Destroyer',
+        qr_code_id: 'qr-123',
+      });
       mockApiRequest.mockResolvedValueOnce(linkedDisc);
 
       const result = await discService.linkQrCode('disc-1', 'qr-123');
@@ -147,7 +195,11 @@ describe('discService', () => {
 
   describe('unlinkQrCode', () => {
     it('unlinks a QR code from a disc', async () => {
-      const unlinkedDisc = { id: 'disc-1', qr_code_id: null };
+      const unlinkedDisc = createMockDisc({
+        id: 'disc-1',
+        name: 'Destroyer',
+        qr_code_id: null,
+      });
       mockApiRequest.mockResolvedValueOnce(unlinkedDisc);
 
       const result = await discService.unlinkQrCode('disc-1');
@@ -163,7 +215,11 @@ describe('discService', () => {
   describe('uploadPhoto', () => {
     it('uploads a photo for a disc', async () => {
       const photoData = { uri: 'file://photo.jpg', type: 'image/jpeg' };
-      const updatedDisc = { id: 'disc-1', photo_url: 'https://storage/photo.jpg' };
+      const updatedDisc = createMockDisc({
+        id: 'disc-1',
+        name: 'Destroyer',
+        photo_url: 'https://storage/photo.jpg',
+      });
       mockApiRequest.mockResolvedValueOnce(updatedDisc);
 
       const result = await discService.uploadPhoto('disc-1', photoData);
