@@ -123,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((error) => {
         console.error('Failed to get session:', error);
+        captureError(error, { operation: 'getSession' });
         setLoading(false);
       });
 
@@ -168,12 +169,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (error) {
               console.error('OAuth error:', error);
+              captureError(error, {
+                operation: 'oauthCallback',
+                hasAccessToken: !!accessToken,
+                hasRefreshToken: !!refreshToken,
+              });
             } else {
               console.log('Session set successfully');
             }
           }
         } catch (err) {
           console.error('Error parsing deep link:', err);
+          captureError(err as Error, {
+            operation: 'deepLinkParsing',
+            url: event.url,
+          });
         }
       }
     };
@@ -225,6 +235,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     });
+    if (error) {
+      captureError(error, { operation: 'signIn', email });
+    }
     return { error };
   };
 
@@ -233,6 +246,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     });
+    if (error) {
+      captureError(error, { operation: 'signUp', email });
+    }
     return { error };
   };
 
@@ -243,6 +259,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         redirectTo: 'com.discr.app://',
       },
     });
+    if (error) {
+      captureError(error, { operation: 'signInWithGoogle', provider: 'google' });
+    }
     return { error };
   };
 
