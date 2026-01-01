@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { StyleSheet, TouchableOpacity, View as RNView } from 'react-native';
 import { Text } from '@/components/Themed';
 import Svg, { Path, Line, Circle, G, Text as SvgText } from 'react-native-svg';
@@ -61,18 +61,24 @@ export default function FlightPath({
   // null = show all, 'hyzer'/'flat'/'anhyzer' = show only that one
   const [selectedPath, setSelectedPath] = useState<'hyzer' | 'flat' | 'anhyzer' | null>(null);
 
-  const togglePath = (path: 'hyzer' | 'flat' | 'anhyzer') => {
+  const togglePath = useCallback((path: 'hyzer' | 'flat' | 'anhyzer') => {
     // If already selected, go back to showing all
     // If not selected, show only this one
     setSelectedPath((prev) => (prev === path ? null : path));
-  };
+  }, []);
+
+  const setBackhand = useCallback(() => setThrowStyle('backhand'), []);
+  const setForehand = useCallback(() => setThrowStyle('forehand'), []);
+  const toggleHyzer = useCallback(() => togglePath('hyzer'), [togglePath]);
+  const toggleFlat = useCallback(() => togglePath('flat'), [togglePath]);
+  const toggleAnhyzer = useCallback(() => togglePath('anhyzer'), [togglePath]);
 
   // Determine which paths to show
-  const visiblePaths = {
+  const visiblePaths = useMemo(() => ({
     hyzer: selectedPath === null || selectedPath === 'hyzer',
     flat: selectedPath === null || selectedPath === 'flat',
     anhyzer: selectedPath === null || selectedPath === 'anhyzer',
-  };
+  }), [selectedPath]);
 
   // Fetch user's throwing hand preference
   useEffect(() => {
@@ -107,39 +113,41 @@ export default function FlightPath({
   }, []);
 
   // Calculate throw type based on hand and style
-  const getThrowType = (): ThrowType => {
+  const throwType = useMemo((): ThrowType => {
     if (throwingHand === 'right') {
       return throwStyle === 'backhand' ? 'rhbh' : 'rhfh';
     } else {
       return throwStyle === 'backhand' ? 'lhbh' : 'lhfh';
     }
-  };
+  }, [throwingHand, throwStyle]);
 
-  const flightNumbers: FlightNumbers = { speed, glide, turn, fade };
+  const flightNumbers: FlightNumbers = useMemo(() => ({ speed, glide, turn, fade }), [speed, glide, turn, fade]);
   const graphCenterX = LEFT_MARGIN + (CANVAS_WIDTH - LEFT_MARGIN) / 2;
   const teeY = CANVAS_HEIGHT - 20;
-  const maxDistance = getMaxDistance(speed, glide);
+  const maxDistance = useMemo(() => getMaxDistance(speed, glide), [speed, glide]);
 
   // Canvas config for flight path calculation - paths start from tee position
-  const canvasConfig: CanvasConfig = {
+  const canvasConfig: CanvasConfig = useMemo(() => ({
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT,
     startX: graphCenterX,
     startY: teeY,
     maxDistance, // Pass scale to calculator
-  };
+  }), [graphCenterX, teeY, maxDistance]);
 
-  const paths = calculateFlightPath(flightNumbers, getThrowType(), canvasConfig);
+  const paths = useMemo(() => calculateFlightPath(flightNumbers, throwType, canvasConfig), [flightNumbers, throwType, canvasConfig]);
 
   // Distance markers - divide into 4 equal parts
-  const flightAreaTop = 20;
-  const flightAreaHeight = teeY - flightAreaTop;
-  const pixelsPerFoot = flightAreaHeight / maxDistance;
-  const markerInterval = maxDistance / 4;
-  const distanceMarkers = [1, 2, 3, 4].map((i) => ({
-    y: teeY - i * markerInterval * pixelsPerFoot,
-    distance: Math.round(i * markerInterval),
-  }));
+  const distanceMarkers = useMemo(() => {
+    const flightAreaTop = 20;
+    const flightAreaHeight = teeY - flightAreaTop;
+    const pixelsPerFoot = flightAreaHeight / maxDistance;
+    const markerInterval = maxDistance / 4;
+    return [1, 2, 3, 4].map((i) => ({
+      y: teeY - i * markerInterval * pixelsPerFoot,
+      distance: Math.round(i * markerInterval),
+    }));
+  }, [teeY, maxDistance]);
 
   return (
     <RNView style={[styles.container, isDark && styles.containerDark]}>
@@ -251,7 +259,7 @@ export default function FlightPath({
             isDark && styles.toggleButtonDark,
             throwStyle === 'backhand' && isDark && styles.toggleButtonActiveDark,
           ]}
-          onPress={() => setThrowStyle('backhand')}>
+          onPress={setBackhand}>
           <Text
             style={[
               styles.toggleText,
@@ -268,7 +276,7 @@ export default function FlightPath({
             isDark && styles.toggleButtonDark,
             throwStyle === 'forehand' && isDark && styles.toggleButtonActiveDark,
           ]}
-          onPress={() => setThrowStyle('forehand')}>
+          onPress={setForehand}>
           <Text
             style={[
               styles.toggleText,
@@ -286,7 +294,7 @@ export default function FlightPath({
             styles.legendItem,
             !visiblePaths.hyzer && styles.legendItemInactive,
           ]}
-          onPress={() => togglePath('hyzer')}>
+          onPress={toggleHyzer}>
           <RNView
             style={[
               styles.legendLine,
@@ -307,7 +315,7 @@ export default function FlightPath({
             styles.legendItem,
             !visiblePaths.flat && styles.legendItemInactive,
           ]}
-          onPress={() => togglePath('flat')}>
+          onPress={toggleFlat}>
           <RNView
             style={[
               styles.legendLine,
@@ -328,7 +336,7 @@ export default function FlightPath({
             styles.legendItem,
             !visiblePaths.anhyzer && styles.legendItemInactive,
           ]}
-          onPress={() => togglePath('anhyzer')}>
+          onPress={toggleAnhyzer}>
           <RNView
             style={[
               styles.legendLine,
