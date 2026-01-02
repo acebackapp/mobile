@@ -358,6 +358,15 @@ useProtectedRoute checks user state
 └─ Authenticated → /(tabs)
 ```
 
+## Cross-Repository Updates
+
+When adding new user-facing features, consider updating the web landing page:
+
+- **Web App** (`web/`): Announce new features on the landing page
+  - Update feature highlights section for major new capabilities
+  - Add screenshots or descriptions of new functionality
+  - Ensure marketing copy reflects current app capabilities
+
 ## References
 
 - @README.md - Repository overview
