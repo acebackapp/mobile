@@ -112,40 +112,39 @@ export default function CameraWithOverlay({
 
   return (
     <Modal visible={visible} animationType="slide">
-      <View style={styles.container}>
+      <View style={styles.container} onLayout={handleCameraLayout}>
         <CameraView
           ref={cameraRef}
           style={styles.camera}
           facing={facing}
-          onLayout={handleCameraLayout}
-        >
-          {/* Overlay with optional circle guide */}
-          <View style={styles.overlay}>
-            {showCircleGuide && (
-              <View style={styles.circleGuide}>
-                <View style={styles.circle} />
-              </View>
-            )}
-            <Text style={[styles.helperText, !showCircleGuide && styles.helperTextNoCircle]}>
-              {helperText}
-            </Text>
-          </View>
+        />
 
-          {/* Controls */}
-          <View style={styles.controls}>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <FontAwesome name="times" size={28} color="#fff" />
-            </TouchableOpacity>
+        {/* Overlay - OUTSIDE CameraView to fix positioning issues */}
+        <View style={styles.overlay} pointerEvents="none">
+          {showCircleGuide && (
+            <View style={styles.circleGuide}>
+              <View style={styles.circle} />
+            </View>
+          )}
+          <Text style={[styles.helperText, !showCircleGuide && styles.helperTextNoCircle]}>
+            {helperText}
+          </Text>
+        </View>
 
-            <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-              <View style={styles.captureButtonInner} />
-            </TouchableOpacity>
+        {/* Controls - OUTSIDE CameraView */}
+        <View style={styles.controls}>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <FontAwesome name="times" size={28} color="#fff" />
+          </TouchableOpacity>
 
-            <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
-              <FontAwesome name="refresh" size={28} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </CameraView>
+          <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+            <View style={styles.captureButtonInner} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
+            <FontAwesome name="refresh" size={28} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
     </Modal>
   );
