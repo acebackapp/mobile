@@ -102,6 +102,57 @@ export default function FlightPathOverlay({
     // Box dimensions for demo mode markers
     const boxSize = Math.min(width, height) * 0.12; // 12% of smallest dimension
     const halfBox = boxSize / 2;
+    const cornerLength = boxSize * 0.35; // Length of corner brackets
+    const strokeWidth = 2.5;
+
+    // Helper to draw corner brackets (viewfinder style)
+    const renderCornerBrackets = (cx: number, cy: number, color: string) => {
+      const left = cx - halfBox;
+      const right = cx + halfBox;
+      const top = cy - halfBox;
+      const bottom = cy + halfBox;
+
+      return (
+        <>
+          {/* Top-left corner */}
+          <Path
+            d={`M ${left} ${top + cornerLength} L ${left} ${top} L ${left + cornerLength} ${top}`}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray="6,3"
+          />
+          {/* Top-right corner */}
+          <Path
+            d={`M ${right - cornerLength} ${top} L ${right} ${top} L ${right} ${top + cornerLength}`}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray="6,3"
+          />
+          {/* Bottom-left corner */}
+          <Path
+            d={`M ${left} ${bottom - cornerLength} L ${left} ${bottom} L ${left + cornerLength} ${bottom}`}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray="6,3"
+          />
+          {/* Bottom-right corner */}
+          <Path
+            d={`M ${right - cornerLength} ${bottom} L ${right} ${bottom} L ${right} ${bottom - cornerLength}`}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray="6,3"
+          />
+        </>
+      );
+    };
 
     return (
       <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
@@ -110,18 +161,9 @@ export default function FlightPathOverlay({
           <Path d={scaledPath} stroke={pathColor} strokeWidth={3} fill="none" strokeLinecap="round" />
         )}
 
-        {/* Tee box - green dashed rectangle with label */}
+        {/* Tee box - green corner brackets with label */}
         <G>
-          <Rect
-            x={scaledTeeX - halfBox}
-            y={scaledTeeY - halfBox}
-            width={boxSize}
-            height={boxSize}
-            fill="rgba(34, 197, 94, 0.2)"
-            stroke="#22C55E"
-            strokeWidth={3}
-            strokeDasharray="8,4"
-          />
+          {renderCornerBrackets(scaledTeeX, scaledTeeY, '#22C55E')}
           <SvgText
             x={scaledTeeX}
             y={scaledTeeY - halfBox - 8}
@@ -132,22 +174,14 @@ export default function FlightPathOverlay({
           >
             TEE
           </SvgText>
-          {/* Tee center marker */}
-          <Circle cx={scaledTeeX} cy={scaledTeeY} r={6} fill="#22C55E" stroke="#fff" strokeWidth={2} />
+          {/* Tee center marker - circle with ring */}
+          <Circle cx={scaledTeeX} cy={scaledTeeY} r={8} fill="none" stroke="#22C55E" strokeWidth={2} />
+          <Circle cx={scaledTeeX} cy={scaledTeeY} r={3} fill="#22C55E" />
         </G>
 
-        {/* Basket box - red/orange dashed rectangle with label */}
+        {/* Basket box - red corner brackets with label */}
         <G>
-          <Rect
-            x={scaledBasketX - halfBox}
-            y={scaledBasketY - halfBox}
-            width={boxSize}
-            height={boxSize}
-            fill="rgba(239, 68, 68, 0.2)"
-            stroke="#EF4444"
-            strokeWidth={3}
-            strokeDasharray="8,4"
-          />
+          {renderCornerBrackets(scaledBasketX, scaledBasketY, '#EF4444')}
           <SvgText
             x={scaledBasketX}
             y={scaledBasketY - halfBox - 8}
@@ -158,9 +192,9 @@ export default function FlightPathOverlay({
           >
             BASKET
           </SvgText>
-          {/* Basket center marker - target style */}
-          <Circle cx={scaledBasketX} cy={scaledBasketY} r={8} fill="none" stroke="#EF4444" strokeWidth={2} />
-          <Circle cx={scaledBasketX} cy={scaledBasketY} r={3} fill="#EF4444" />
+          {/* Basket center marker - target style with crosshairs */}
+          <Circle cx={scaledBasketX} cy={scaledBasketY} r={10} fill="none" stroke="#EF4444" strokeWidth={2} />
+          <Circle cx={scaledBasketX} cy={scaledBasketY} r={4} fill="#EF4444" />
         </G>
       </Svg>
     );
