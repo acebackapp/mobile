@@ -27,6 +27,8 @@ interface FlightPathOverlayProps {
   throwType: 'hyzer' | 'flat' | 'anhyzer';
   throwingHand: 'right' | 'left';
   onPositionChange?: (data: PositionChangeData) => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }
 
 function toFlightNumbers(fn: NullableFlightNumbers | null): FlightNumbers | null {
@@ -53,6 +55,8 @@ export default function FlightPathOverlay({
   throwType,
   throwingHand,
   onPositionChange,
+  onDragStart,
+  onDragEnd,
 }: FlightPathOverlayProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -103,6 +107,7 @@ export default function FlightPathOverlay({
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
         startPos = { ...positionRef.current };
+        onDragStart?.();
       },
       onPanResponderMove: (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
         if (imageSize.width === 0 || imageSize.height === 0) return;
@@ -118,6 +123,7 @@ export default function FlightPathOverlay({
         setPosition({ x: newX, y: newY });
       },
       onPanResponderRelease: () => {
+        onDragEnd?.();
         // Notify parent of position change using refs for current values
         if (onPositionChange) {
           onPositionChange({
@@ -127,6 +133,9 @@ export default function FlightPathOverlay({
             originalBasketPosition: originalBasketRef.current,
           });
         }
+      },
+      onPanResponderTerminate: () => {
+        onDragEnd?.();
       },
     });
   };

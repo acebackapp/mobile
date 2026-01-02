@@ -134,6 +134,11 @@ export default function ShotRecommendationScreen() {
     }
   }, [result?.log_id, savePositionCorrection]);
 
+  // Control scroll during marker drag
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const handleDragStart = useCallback(() => setScrollEnabled(false), []);
+  const handleDragEnd = useCallback(() => setScrollEnabled(true), []);
+
   // Dynamic styles for dark/light mode
   const dynamicStyles = {
     container: {
@@ -262,6 +267,7 @@ export default function ShotRecommendationScreen() {
       <ScrollView
         style={styles.resultScroll}
         contentContainerStyle={styles.resultContent}
+        scrollEnabled={scrollEnabled}
       >
         {/* Flight Path Overlay - shown if we have coordinates */}
         {flight_path && photoUri && (
@@ -273,6 +279,8 @@ export default function ShotRecommendationScreen() {
             throwType={recommendation.throw_type}
             throwingHand={throwingHand}
             onPositionChange={handlePositionChange}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
           />
         )}
 
