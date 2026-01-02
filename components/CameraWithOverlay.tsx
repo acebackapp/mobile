@@ -126,9 +126,11 @@ export default function CameraWithOverlay({
               <View style={styles.circle} />
             </View>
           )}
-          <Text style={[styles.helperText, !showCircleGuide && styles.helperTextNoCircle]}>
-            {helperText}
-          </Text>
+          <View style={styles.helperTextContainer}>
+            <Text style={[styles.helperText, !showCircleGuide && styles.helperTextNoCircle]}>
+              {helperText}
+            </Text>
+          </View>
         </View>
 
         {/* Controls - OUTSIDE CameraView */}
@@ -210,8 +212,14 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     backgroundColor: 'transparent',
   },
+  helperTextContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: '30%',
+    alignItems: 'center',
+  },
   helperText: {
-    marginTop: 24,
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
@@ -223,7 +231,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   helperTextNoCircle: {
-    marginTop: 0,
     position: 'absolute',
     top: 100,
   },
