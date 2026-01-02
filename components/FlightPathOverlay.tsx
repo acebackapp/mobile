@@ -27,6 +27,8 @@ interface FlightPathOverlayProps {
   throwType: 'hyzer' | 'flat' | 'anhyzer';
   throwingHand: 'right' | 'left';
   onPositionChange?: (data: PositionChangeData) => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }
 
 function toFlightNumbers(fn: NullableFlightNumbers | null): FlightNumbers | null {
@@ -53,6 +55,8 @@ export default function FlightPathOverlay({
   throwType,
   throwingHand,
   onPositionChange,
+  onDragStart,
+  onDragEnd,
 }: FlightPathOverlayProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -103,6 +107,7 @@ export default function FlightPathOverlay({
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
         startPos = { ...positionRef.current };
+        onDragStart?.();
       },
       onPanResponderMove: (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
         if (imageSize.width === 0 || imageSize.height === 0) return;
@@ -118,6 +123,7 @@ export default function FlightPathOverlay({
         setPosition({ x: newX, y: newY });
       },
       onPanResponderRelease: () => {
+        onDragEnd?.();
         // Notify parent of position change using refs for current values
         if (onPositionChange) {
           onPositionChange({
@@ -127,6 +133,9 @@ export default function FlightPathOverlay({
             originalBasketPosition: originalBasketRef.current,
           });
         }
+      },
+      onPanResponderTerminate: () => {
+        onDragEnd?.();
       },
     });
   };
@@ -277,44 +286,44 @@ export default function FlightPathOverlay({
 
   return (
     <>
-      <Pressable style={[styles.container, isDark && styles.containerDark]} onPress={() => setIsExpanded(true)}>
-        <View style={styles.imageWrapper} onLayout={handleImageLayout}>
+      <View style={[styles.container, isDark && styles.containerDark]}>
+        <Pressable style={styles.imageWrapper} onLayout={handleImageLayout} onPress={() => setIsExpanded(true)}>
           <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
 
           {/* SVG Overlay with editable positions */}
           {imageSize.width > 0 && imageSize.height > 0 && renderOverlay(imageSize.width, imageSize.height, editableTee, editableBasket)}
+        </Pressable>
 
-          {/* Draggable touch targets for markers */}
-          {imageSize.width > 0 && imageSize.height > 0 && (
-            <>
-              {/* Tee drag handle */}
-              <View
-                {...teePanResponder.panHandlers}
-                style={[
-                  styles.dragHandle,
-                  {
-                    left: teePixelX - 25,
-                    top: teePixelY - 25,
-                    borderColor: '#22C55E',
-                  },
-                ]}
-              />
-              {/* Basket drag handle */}
-              <View
-                {...basketPanResponder.panHandlers}
-                style={[
-                  styles.dragHandle,
-                  {
-                    left: basketPixelX - 25,
-                    top: basketPixelY - 25,
-                    borderColor: '#EF4444',
-                  },
-                ]}
-              />
-            </>
-          )}
-        </View>
-      </Pressable>
+        {/* Draggable touch targets for markers - OUTSIDE Pressable */}
+        {imageSize.width > 0 && imageSize.height > 0 && (
+          <>
+            {/* Tee drag handle */}
+            <View
+              {...teePanResponder.panHandlers}
+              style={[
+                styles.dragHandle,
+                {
+                  left: teePixelX - 25,
+                  top: teePixelY - 25,
+                  borderColor: '#22C55E',
+                },
+              ]}
+            />
+            {/* Basket drag handle */}
+            <View
+              {...basketPanResponder.panHandlers}
+              style={[
+                styles.dragHandle,
+                {
+                  left: basketPixelX - 25,
+                  top: basketPixelY - 25,
+                  borderColor: '#EF4444',
+                },
+              ]}
+            />
+          </>
+        )}
+      </View>
 
       {/* Fullscreen Modal */}
       <Modal visible={isExpanded} transparent animationType="fade" onRequestClose={() => setIsExpanded(false)}>
