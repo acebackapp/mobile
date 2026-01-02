@@ -334,16 +334,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   controls: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingHorizontal: 32,
-    paddingVertical: 24,
-    backgroundColor: '#000',
   },
   cancelButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 8,
   },
   cancelButtonText: {
     color: '#fff',
@@ -356,7 +360,7 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: Colors.violet.primary,
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderRadius: 8,
   },
   cropButtonDisabled: {
