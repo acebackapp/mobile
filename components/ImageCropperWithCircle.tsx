@@ -57,6 +57,13 @@ export default function ImageCropperWithCircle({
           };
           const initialTransforms = calculateInitialCropperTransforms(captureMeta, cropperConfig);
 
+          console.log('Cropper alignment debug:', {
+            captureMeta,
+            cropperConfig,
+            initialTransforms,
+            imageDimensions: { width, height },
+          });
+
           // Apply initial transforms with animation for smooth appearance
           scale.value = withSpring(initialTransforms.scale, { damping: 15 });
           savedScale.value = initialTransforms.scale;

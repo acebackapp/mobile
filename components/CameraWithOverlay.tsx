@@ -92,6 +92,18 @@ export default function CameraWithOverlay({
               }
             : undefined;
 
+        console.log('Camera capture debug:', {
+          photoWidth: photo.width,
+          photoHeight: photo.height,
+          previewWidth: cameraLayout.width,
+          previewHeight: cameraLayout.height,
+          circleSize: CIRCLE_SIZE,
+          circleCenterX: cameraLayout.width / 2,
+          circleCenterY: cameraLayout.height / 2,
+          photoAspect: photo.width / photo.height,
+          previewAspect: cameraLayout.width / cameraLayout.height,
+        });
+
         onPhotoTaken({ uri: photo.uri, meta });
         onClose();
       }
