@@ -286,44 +286,44 @@ export default function FlightPathOverlay({
 
   return (
     <>
-      <Pressable style={[styles.container, isDark && styles.containerDark]} onPress={() => setIsExpanded(true)}>
-        <View style={styles.imageWrapper} onLayout={handleImageLayout}>
+      <View style={[styles.container, isDark && styles.containerDark]}>
+        <Pressable style={styles.imageWrapper} onLayout={handleImageLayout} onPress={() => setIsExpanded(true)}>
           <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
 
           {/* SVG Overlay with editable positions */}
           {imageSize.width > 0 && imageSize.height > 0 && renderOverlay(imageSize.width, imageSize.height, editableTee, editableBasket)}
+        </Pressable>
 
-          {/* Draggable touch targets for markers */}
-          {imageSize.width > 0 && imageSize.height > 0 && (
-            <>
-              {/* Tee drag handle */}
-              <View
-                {...teePanResponder.panHandlers}
-                style={[
-                  styles.dragHandle,
-                  {
-                    left: teePixelX - 25,
-                    top: teePixelY - 25,
-                    borderColor: '#22C55E',
-                  },
-                ]}
-              />
-              {/* Basket drag handle */}
-              <View
-                {...basketPanResponder.panHandlers}
-                style={[
-                  styles.dragHandle,
-                  {
-                    left: basketPixelX - 25,
-                    top: basketPixelY - 25,
-                    borderColor: '#EF4444',
-                  },
-                ]}
-              />
-            </>
-          )}
-        </View>
-      </Pressable>
+        {/* Draggable touch targets for markers - OUTSIDE Pressable */}
+        {imageSize.width > 0 && imageSize.height > 0 && (
+          <>
+            {/* Tee drag handle */}
+            <View
+              {...teePanResponder.panHandlers}
+              style={[
+                styles.dragHandle,
+                {
+                  left: teePixelX - 25,
+                  top: teePixelY - 25,
+                  borderColor: '#22C55E',
+                },
+              ]}
+            />
+            {/* Basket drag handle */}
+            <View
+              {...basketPanResponder.panHandlers}
+              style={[
+                styles.dragHandle,
+                {
+                  left: basketPixelX - 25,
+                  top: basketPixelY - 25,
+                  borderColor: '#EF4444',
+                },
+              ]}
+            />
+          </>
+        )}
+      </View>
 
       {/* Fullscreen Modal */}
       <Modal visible={isExpanded} transparent animationType="fade" onRequestClose={() => setIsExpanded(false)}>
