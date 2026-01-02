@@ -12,11 +12,15 @@ import {
   ScrollView,
   useColorScheme,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateSignUpForm } from '@/lib/validation';
 import { handleError } from '@/lib/errorHandler';
 import Colors from '@/constants/Colors';
+
+const logoLight = require('@/assets/images/logo.webp');
+const logoDark = require('@/assets/images/logo-white.webp');
 
 export default function SignUp() {
   const colorScheme = useColorScheme();
@@ -103,7 +107,12 @@ export default function SignUp() {
       >
         <View style={styles.content}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logo}>Discr</Text>
+            <Image
+              source={isDark ? logoDark : logoLight}
+              style={styles.logo}
+              contentFit="contain"
+              testID="app-logo"
+            />
           </View>
 
           <Text style={[styles.title, dynamicStyles.text]}>Create Account</Text>
@@ -222,10 +231,8 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   logo: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: Colors.violet.primary,
-    letterSpacing: -1,
+    width: 180,
+    height: 60,
   },
   title: {
     fontSize: 32,
