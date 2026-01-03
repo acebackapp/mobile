@@ -70,9 +70,9 @@ describe('SignUp', () => {
   });
 
   it('renders correctly', () => {
-    const { getAllByText, getByText, getByPlaceholderText } = render(<SignUp />);
+    const { getAllByText, getByText, getByPlaceholderText, getByTestId } = render(<SignUp />);
 
-    expect(getByText('Discr')).toBeTruthy();
+    expect(getByTestId('app-logo')).toBeTruthy();
     expect(getAllByText('Create Account').length).toBeGreaterThanOrEqual(1);
     expect(getByText('Sign up to get started')).toBeTruthy();
     expect(getByPlaceholderText('Enter your email')).toBeTruthy();

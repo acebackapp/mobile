@@ -43,9 +43,9 @@ describe('SignIn', () => {
   });
 
   it('renders correctly', () => {
-    const { getByText, getByPlaceholderText } = render(<SignIn />);
+    const { getByText, getByPlaceholderText, getByTestId } = render(<SignIn />);
 
-    expect(getByText('Discr')).toBeTruthy();
+    expect(getByTestId('app-logo')).toBeTruthy();
     expect(getByText('Welcome Back')).toBeTruthy();
     expect(getByText('Sign in to continue')).toBeTruthy();
     expect(getByPlaceholderText('Enter your email')).toBeTruthy();
@@ -540,9 +540,9 @@ describe('SignIn', () => {
   });
 
   it('displays correct text labels', () => {
-    const { getByText } = render(<SignIn />);
+    const { getByText, getByTestId } = render(<SignIn />);
 
-    expect(getByText('Discr')).toBeTruthy();
+    expect(getByTestId('app-logo')).toBeTruthy();
     expect(getByText('Welcome Back')).toBeTruthy();
     expect(getByText('Sign in to continue')).toBeTruthy();
     expect(getByText('Email')).toBeTruthy();
