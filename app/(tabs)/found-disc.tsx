@@ -28,7 +28,28 @@ import { handleError } from '@/lib/errorHandler';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-type ScreenState = 'input' | 'scanning' | 'loading' | 'found' | 'reporting' | 'success' | 'error' | 'qr_claim' | 'qr_link' | 'claiming' | 'claim_success';
+type ScreenState =
+  | 'input'           // Existing - choose QR or Photo
+  | 'scanning'        // Existing - QR code scanner
+  | 'loading'         // Existing - looking up QR
+  | 'found'           // Existing - disc found via QR
+  | 'reporting'       // Existing - submitting report
+  | 'success'         // Existing - report success
+  | 'error'           // Existing - error state
+  | 'qr_claim'        // Existing - unclaimed QR
+  | 'qr_link'         // Existing - QR needs linking
+  | 'claiming'        // Existing - claiming QR
+  | 'claim_success'   // Existing - claim success
+  // Visual recovery flow states
+  | 'photo_back'      // Camera for back photo (phone number)
+  | 'photo_front'     // Camera for front photo (disc design)
+  | 'photo_preview'   // Review both photos
+  | 'extracting'      // AI extracting phone
+  | 'phone_result'    // Show extracted phone, allow edit
+  | 'looking_up'      // Searching for owner by phone
+  | 'owner_found'     // Show owner + their discs
+  | 'owner_not_found' // Offer SMS invite
+  | 'sending_sms';    // Sending SMS invite
 
 interface DiscInfo {
   id: string;
@@ -69,6 +90,29 @@ interface PendingRecovery {
   } | null;
 }
 
+// Visual recovery flow interfaces
+interface ExtractedPhone {
+  raw: string;
+  normalized: string;
+  confidence: number;
+}
+
+interface OwnerDisc {
+  id: string;
+  name: string;
+  manufacturer: string | null;
+  mold: string | null;
+  color: string | null;
+  photo_url: string | null;
+}
+
+interface OwnerInfo {
+  id: string;
+  display_name: string;
+  disc_count: number;
+  discs: OwnerDisc[];
+}
+
 export default function FoundDiscScreen() {
   const router = useRouter();
   const { scannedCode: routeScannedCode } = useLocalSearchParams<{ scannedCode?: string }>();
@@ -89,6 +133,15 @@ export default function FoundDiscScreen() {
   const [loadingMyDiscs, setLoadingMyDiscs] = useState(true);
   const [unclaimedQrCode, setUnclaimedQrCode] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Visual recovery flow state
+  const [backPhotoUri, setBackPhotoUri] = useState<string | null>(null);
+  const [frontPhotoUri, setFrontPhotoUri] = useState<string | null>(null);
+  const [extractedPhones, setExtractedPhones] = useState<ExtractedPhone[]>([]);
+  const [editablePhone, setEditablePhone] = useState('');
+  const [ownerInfo, setOwnerInfo] = useState<OwnerInfo | null>(null);
+  const [selectedDiscId, setSelectedDiscId] = useState<string | null>(null);
+  const cameraRef = useRef<CameraView>(null);
 
   // istanbul ignore next -- Pull-to-refresh tested via integration tests
   // Pull-to-refresh handler
@@ -488,12 +541,281 @@ export default function FoundDiscScreen() {
     setErrorMessage('');
     setHasActiveRecovery(false);
     setUnclaimedQrCode(null);
+    // Reset visual recovery state
+    setBackPhotoUri(null);
+    setFrontPhotoUri(null);
+    setExtractedPhones([]);
+    setEditablePhone('');
+    setOwnerInfo(null);
+    setSelectedDiscId(null);
   };
 
   // istanbul ignore next -- Navigation tested via integration tests
   const navigateToProposeMeetup = () => {
     if (recoveryEvent) {
       router.push(`/propose-meetup/${recoveryEvent.id}`);
+    }
+  };
+
+  // Visual recovery flow functions
+  // istanbul ignore next -- Native camera permission requires device testing
+  const startPhotoCapture = async () => {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) {
+        Alert.alert(
+          'Camera Permission Required',
+          'Please grant camera permission to take photos of the disc.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+    setBackPhotoUri(null);
+    setFrontPhotoUri(null);
+    setScreenState('photo_back');
+  };
+
+  // istanbul ignore next -- Native camera requires device testing
+  const takePhoto = async () => {
+    if (!cameraRef.current) return;
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        base64: false,
+      });
+      if (!photo?.uri) return;
+
+      if (screenState === 'photo_back') {
+        setBackPhotoUri(photo.uri);
+        setScreenState('photo_front');
+      } else if (screenState === 'photo_front') {
+        setFrontPhotoUri(photo.uri);
+        setScreenState('photo_preview');
+      }
+    } catch (error) {
+      logger.error('Photo capture error:', error);
+      Alert.alert('Error', 'Failed to capture photo. Please try again.');
+    }
+  };
+
+  // istanbul ignore next -- API integration tested via integration tests
+  const extractPhoneFromPhotos = async () => {
+    if (!backPhotoUri || !frontPhotoUri) return;
+
+    setScreenState('extracting');
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        Alert.alert('Error', 'You must be signed in');
+        setScreenState('photo_preview');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('back_image', {
+        uri: backPhotoUri,
+        type: 'image/jpeg',
+        name: 'back.jpg',
+      } as unknown as Blob);
+      formData.append('front_image', {
+        uri: frontPhotoUri,
+        type: 'image/jpeg',
+        name: 'front.jpg',
+      } as unknown as Blob);
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/extract-phone-from-photo`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorMessage(data.error || 'Failed to extract phone number');
+        setScreenState('error');
+        return;
+      }
+
+      if (data.phone_numbers && data.phone_numbers.length > 0) {
+        setExtractedPhones(data.phone_numbers);
+        setEditablePhone(data.phone_numbers[0].normalized);
+      } else {
+        setExtractedPhones([]);
+        setEditablePhone('');
+      }
+      setScreenState('phone_result');
+    } catch (error) {
+      logger.error('Phone extraction error:', error);
+      handleError(error, { operation: 'extract-phone-from-photo' });
+      setErrorMessage('Failed to extract phone number. Please try again.');
+      setScreenState('error');
+    }
+  };
+
+  // istanbul ignore next -- API integration tested via integration tests
+  const lookupOwnerByPhone = async () => {
+    if (!editablePhone.trim()) {
+      Alert.alert('Error', 'Please enter a phone number');
+      return;
+    }
+
+    setScreenState('looking_up');
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        Alert.alert('Error', 'You must be signed in');
+        setScreenState('phone_result');
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/lookup-user-by-phone`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ phone_number: editablePhone.trim() }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorMessage(data.error || 'Failed to look up owner');
+        setScreenState('error');
+        return;
+      }
+
+      if (data.found && data.discoverable && data.user) {
+        setOwnerInfo({
+          id: data.user.id,
+          display_name: data.user.display_name,
+          disc_count: data.user.disc_count,
+          discs: data.discs || [],
+        });
+        setScreenState('owner_found');
+      } else if (data.found && !data.discoverable) {
+        setErrorMessage('The owner prefers not to be contacted this way.');
+        setScreenState('error');
+      } else {
+        setScreenState('owner_not_found');
+      }
+    } catch (error) {
+      logger.error('Owner lookup error:', error);
+      handleError(error, { operation: 'lookup-user-by-phone' });
+      setErrorMessage('Failed to look up owner. Please try again.');
+      setScreenState('error');
+    }
+  };
+
+  // istanbul ignore next -- API integration tested via integration tests
+  const reportFoundDiscByPhone = async () => {
+    if (!ownerInfo) return;
+
+    setScreenState('reporting');
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        Alert.alert('Error', 'You must be signed in');
+        setScreenState('owner_found');
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/report-found-disc-by-phone`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            owner_id: ownerInfo.id,
+            disc_id: selectedDiscId || undefined,
+            message: message.trim() || undefined,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorMessage(data.error || 'Failed to report found disc');
+        setScreenState('error');
+        return;
+      }
+
+      setRecoveryEvent(data.recovery_event);
+      setScreenState('success');
+      fetchPendingRecoveries();
+    } catch (error) {
+      logger.error('Report error:', error);
+      handleError(error, { operation: 'report-found-disc-by-phone' });
+      setErrorMessage('Failed to report found disc. Please try again.');
+      setScreenState('error');
+    }
+  };
+
+  // istanbul ignore next -- API integration tested via integration tests
+  const sendSmsInvite = async () => {
+    if (!editablePhone.trim()) return;
+
+    setScreenState('sending_sms');
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        Alert.alert('Error', 'You must be signed in');
+        setScreenState('owner_not_found');
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/send-disc-found-sms`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ phone_number: editablePhone.trim() }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          Alert.alert('Already Sent', 'An SMS was already sent to this number recently. Please try again later.');
+        } else {
+          Alert.alert('Error', data.error || 'Failed to send SMS');
+        }
+        setScreenState('owner_not_found');
+        return;
+      }
+
+      Alert.alert(
+        'SMS Sent!',
+        'We\'ve sent a text inviting them to download Discr. They\'ll be able to connect with you once they sign up.',
+        [{ text: 'OK', onPress: resetScreen }]
+      );
+    } catch (error) {
+      logger.error('SMS error:', error);
+      handleError(error, { operation: 'send-disc-found-sms' });
+      Alert.alert('Error', 'Failed to send SMS. Please try again.');
+      setScreenState('owner_not_found');
     }
   };
 
@@ -597,6 +919,21 @@ export default function FoundDiscScreen() {
             <FontAwesome name="search" size={18} color="#fff" />
             <Text style={styles.secondaryButtonText}>Look Up Disc</Text>
           </Pressable>
+
+          {/* Visual Recovery Option */}
+          <View style={styles.orDivider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.orText}>no QR code?</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <Pressable style={styles.photoRecoveryButton} onPress={startPhotoCapture}>
+            <FontAwesome name="phone" size={18} color={Colors.violet.primary} />
+            <Text style={styles.photoRecoveryButtonText}>Use Phone Number on Disc</Text>
+          </Pressable>
+          <Text style={styles.photoRecoveryHint}>
+            Take a photo of the disc to extract the owner's phone number
+          </Text>
 
           {/* Pending Returns Section */}
           {loadingPending && (
@@ -922,6 +1259,365 @@ export default function FoundDiscScreen() {
         <Pressable style={styles.textButton} onPress={resetScreen}>
           <Text style={styles.textButtonText}>Report Another Disc</Text>
         </Pressable>
+      </View>
+    );
+  }
+
+  // istanbul ignore next -- Native camera capture requires device testing
+  // Photo Back State - Camera for back of disc (phone number)
+  if (screenState === 'photo_back') {
+    if (!permission?.granted) {
+      return (
+        <View style={[styles.centerContainer, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
+          <FontAwesome name="camera" size={48} color="#ccc" />
+          <Text style={styles.errorTitle}>Camera Permission Required</Text>
+          <Text style={styles.errorMessage}>
+            Please grant camera permission to take photos of the disc.
+          </Text>
+          <Pressable style={styles.primaryButton} onPress={requestPermission}>
+            <Text style={styles.primaryButtonText}>Grant Permission</Text>
+          </Pressable>
+          <Pressable style={styles.textButton} onPress={resetScreen}>
+            <Text style={styles.textButtonText}>Cancel</Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    return (
+      <RNView style={styles.scannerContainer}>
+        <CameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing="back"
+          active={true}
+        />
+        <RNView style={styles.scannerOverlay}>
+          <RNView style={styles.scannerHeader}>
+            <Text style={styles.scannerTitle}>Photo of Back</Text>
+            <Text style={styles.scannerSubtitle}>
+              Capture the phone number written on the disc
+            </Text>
+          </RNView>
+          <RNView style={styles.scannerFrame}>
+            <RNView style={[styles.cornerBorder, styles.topLeft]} />
+            <RNView style={[styles.cornerBorder, styles.topRight]} />
+            <RNView style={[styles.cornerBorder, styles.bottomLeft]} />
+            <RNView style={[styles.cornerBorder, styles.bottomRight]} />
+          </RNView>
+          <RNView style={{ gap: 16 }}>
+            <Pressable style={styles.captureButton} onPress={takePhoto}>
+              <RNView style={styles.captureButtonInner} />
+            </Pressable>
+            <Pressable style={styles.cancelScanButton} onPress={resetScreen}>
+              <Text style={styles.cancelScanText}>Cancel</Text>
+            </Pressable>
+          </RNView>
+        </RNView>
+      </RNView>
+    );
+  }
+
+  // istanbul ignore next -- Native camera capture requires device testing
+  // Photo Front State - Camera for front of disc (design)
+  if (screenState === 'photo_front') {
+    return (
+      <RNView style={styles.scannerContainer}>
+        <CameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing="back"
+          active={true}
+        />
+        <RNView style={styles.scannerOverlay}>
+          <RNView style={styles.scannerHeader}>
+            <Text style={styles.scannerTitle}>Photo of Front</Text>
+            <Text style={styles.scannerSubtitle}>
+              Now capture the front of the disc (design/stamp)
+            </Text>
+          </RNView>
+          <RNView style={styles.scannerFrame}>
+            <RNView style={[styles.cornerBorder, styles.topLeft]} />
+            <RNView style={[styles.cornerBorder, styles.topRight]} />
+            <RNView style={[styles.cornerBorder, styles.bottomLeft]} />
+            <RNView style={[styles.cornerBorder, styles.bottomRight]} />
+          </RNView>
+          <RNView style={{ gap: 16 }}>
+            <Pressable style={styles.captureButton} onPress={takePhoto}>
+              <RNView style={styles.captureButtonInner} />
+            </Pressable>
+            <Pressable style={styles.cancelScanButton} onPress={() => setScreenState('photo_back')}>
+              <Text style={styles.cancelScanText}>Retake Back Photo</Text>
+            </Pressable>
+          </RNView>
+        </RNView>
+      </RNView>
+    );
+  }
+
+  // Photo Preview State - Review both photos
+  if (screenState === 'photo_preview' && backPhotoUri && frontPhotoUri) {
+    return (
+      <KeyboardAvoidingView
+        style={[styles.container, { backgroundColor: isDark ? '#121212' : '#fff' }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <FontAwesome name="image" size={48} color={Colors.violet.primary} />
+            <Text style={styles.title}>Review Photos</Text>
+            <Text style={styles.subtitle}>
+              Make sure the phone number is clearly visible in the back photo
+            </Text>
+          </View>
+
+          <RNView style={styles.previewImagesRow}>
+            <RNView style={styles.previewImageContainer}>
+              <Text style={styles.previewImageLabel}>Back (Phone #)</Text>
+              <Image source={{ uri: backPhotoUri }} style={styles.previewImage} />
+              <Pressable style={styles.retakeButton} onPress={() => setScreenState('photo_back')}>
+                <Text style={styles.retakeButtonText}>Retake</Text>
+              </Pressable>
+            </RNView>
+            <RNView style={styles.previewImageContainer}>
+              <Text style={styles.previewImageLabel}>Front</Text>
+              <Image source={{ uri: frontPhotoUri }} style={styles.previewImage} />
+              <Pressable style={styles.retakeButton} onPress={() => setScreenState('photo_front')}>
+                <Text style={styles.retakeButtonText}>Retake</Text>
+              </Pressable>
+            </RNView>
+          </RNView>
+
+          <Pressable style={styles.primaryButton} onPress={extractPhoneFromPhotos}>
+            <FontAwesome name="search" size={18} color="#fff" />
+            <Text style={styles.primaryButtonText}>Extract Phone Number</Text>
+          </Pressable>
+
+          <Pressable style={styles.textButton} onPress={resetScreen}>
+            <Text style={styles.textButtonText}>Cancel</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // Extracting State - AI processing
+  if (screenState === 'extracting') {
+    return (
+      <View style={[styles.centerContainer, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
+        <ActivityIndicator size="large" color={Colors.violet.primary} />
+        <Text style={styles.loadingText}>Extracting phone number...</Text>
+        <Text style={[styles.subtitle, { marginTop: 8 }]}>
+          AI is analyzing the disc photos
+        </Text>
+      </View>
+    );
+  }
+
+  // Phone Result State - Show extracted phone or manual entry
+  if (screenState === 'phone_result') {
+    const highConfidence = extractedPhones.length > 0 && extractedPhones[0].confidence >= 0.8;
+
+    return (
+      <KeyboardAvoidingView
+        style={[styles.container, { backgroundColor: isDark ? '#121212' : '#fff' }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <FontAwesome
+              name={extractedPhones.length > 0 ? 'check-circle' : 'exclamation-circle'}
+              size={48}
+              color={extractedPhones.length > 0 ? '#2ECC71' : '#F39C12'}
+            />
+            <Text style={styles.title}>
+              {extractedPhones.length > 0 ? 'Phone Number Found!' : 'No Phone Found'}
+            </Text>
+          </View>
+
+          {extractedPhones.length > 0 && (
+            <RNView style={[styles.phoneResultCard, { backgroundColor: isDark ? '#1e1e1e' : '#f0f0f0' }]}>
+              <RNView style={styles.phoneConfidenceIndicator}>
+                <FontAwesome
+                  name={highConfidence ? 'check' : 'question'}
+                  size={14}
+                  color={highConfidence ? '#2ECC71' : '#F39C12'}
+                />
+                <Text style={styles.phoneConfidenceText}>
+                  {highConfidence ? 'High confidence' : 'Low confidence - please verify'}
+                </Text>
+              </RNView>
+              <Text style={[styles.phoneDisplay, { color: isDark ? '#fff' : '#000' }]}>
+                {extractedPhones[0].raw}
+              </Text>
+            </RNView>
+          )}
+
+          <View style={styles.phoneInputContainer}>
+            <Text style={styles.phoneInputLabel}>
+              {extractedPhones.length > 0 ? 'Edit if needed:' : 'Enter phone number manually:'}
+            </Text>
+            <TextInput
+              style={[styles.phoneInput, {
+                backgroundColor: isDark ? '#252525' : '#fff',
+                borderColor: isDark ? '#2e2e2e' : '#ddd',
+                color: isDark ? '#fff' : '#000',
+              }]}
+              placeholder="(512) 555-1234"
+              placeholderTextColor="#999"
+              value={editablePhone}
+              onChangeText={setEditablePhone}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <Pressable style={styles.primaryButton} onPress={lookupOwnerByPhone}>
+            <FontAwesome name="search" size={18} color="#fff" />
+            <Text style={styles.primaryButtonText}>Look Up Owner</Text>
+          </Pressable>
+
+          <Pressable style={styles.textButton} onPress={() => setScreenState('photo_preview')}>
+            <Text style={styles.textButtonText}>Retake Photos</Text>
+          </Pressable>
+
+          <Pressable style={styles.textButton} onPress={resetScreen}>
+            <Text style={styles.textButtonText}>Cancel</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // Looking Up State - Searching for owner
+  if (screenState === 'looking_up') {
+    return (
+      <View style={[styles.centerContainer, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
+        <ActivityIndicator size="large" color={Colors.violet.primary} />
+        <Text style={styles.loadingText}>Looking up owner...</Text>
+      </View>
+    );
+  }
+
+  // Owner Found State - Show owner info and their discs
+  if (screenState === 'owner_found' && ownerInfo) {
+    const getInitial = (name: string) => name.charAt(0).toUpperCase();
+
+    return (
+      <KeyboardAvoidingView
+        style={[styles.container, { backgroundColor: isDark ? '#121212' : '#fff' }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <FontAwesome name="check-circle" size={48} color="#2ECC71" />
+            <Text style={styles.title}>Owner Found!</Text>
+          </View>
+
+          <RNView style={[styles.ownerCard, { borderColor: isDark ? '#2e2e2e' : '#eee' }]}>
+            <RNView style={styles.ownerAvatar}>
+              <Text style={styles.ownerAvatarText}>{getInitial(ownerInfo.display_name)}</Text>
+            </RNView>
+            <Text style={styles.ownerDisplayName}>{ownerInfo.display_name}</Text>
+            <Text style={styles.ownerDiscCount}>
+              {ownerInfo.disc_count} disc{ownerInfo.disc_count !== 1 ? 's' : ''} registered
+            </Text>
+          </RNView>
+
+          {ownerInfo.discs.length > 0 && (
+            <RNView style={styles.discMatchSection}>
+              <Text style={styles.discMatchTitle}>Is this one of their discs?</Text>
+              {ownerInfo.discs.map((disc) => (
+                <Pressable
+                  key={disc.id}
+                  style={[
+                    styles.discMatchCard,
+                    selectedDiscId === disc.id ? styles.discMatchCardSelected : styles.discMatchCardDefault,
+                  ]}
+                  onPress={() => setSelectedDiscId(selectedDiscId === disc.id ? null : disc.id)}>
+                  {disc.photo_url ? (
+                    <Image source={{ uri: disc.photo_url }} style={styles.discMatchPhoto} />
+                  ) : (
+                    <RNView style={styles.discMatchPhotoPlaceholder}>
+                      <FontAwesome name="circle" size={20} color="#ccc" />
+                    </RNView>
+                  )}
+                  <RNView style={styles.discMatchInfo}>
+                    <Text style={styles.discMatchMold}>{disc.mold || disc.name}</Text>
+                    {disc.manufacturer && (
+                      <Text style={styles.discMatchManufacturer}>{disc.manufacturer}</Text>
+                    )}
+                    {disc.color && <Text style={styles.discMatchColor}>{disc.color}</Text>}
+                  </RNView>
+                  {selectedDiscId === disc.id && (
+                    <RNView style={styles.discMatchCheck}>
+                      <FontAwesome name="check" size={14} color="#fff" />
+                    </RNView>
+                  )}
+                </Pressable>
+              ))}
+            </RNView>
+          )}
+
+          {/* Message Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Message for Owner (Optional)</Text>
+            <TextInput
+              style={[styles.input, styles.messageInput, {
+                backgroundColor: isDark ? '#252525' : '#fff',
+                color: isDark ? '#fff' : '#000',
+                borderColor: isDark ? '#2e2e2e' : '#ddd',
+              }]}
+              placeholder="Where did you find it? Any details..."
+              placeholderTextColor="#999"
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+
+          <Pressable style={styles.primaryButton} onPress={reportFoundDiscByPhone}>
+            <FontAwesome name="flag" size={18} color="#fff" />
+            <Text style={styles.primaryButtonText}>Report Found</Text>
+          </Pressable>
+
+          <Pressable style={styles.textButton} onPress={resetScreen}>
+            <Text style={styles.textButtonText}>Cancel</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // Owner Not Found State - Offer SMS invite
+  if (screenState === 'owner_not_found') {
+    return (
+      <View style={[styles.centerContainer, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
+        <RNView style={[styles.smsInviteCard, { backgroundColor: isDark ? '#1e1e1e' : '#f0f0f0' }]}>
+          <FontAwesome name="user-times" size={48} color="#F39C12" />
+          <Text style={styles.smsInviteText}>
+            This phone number isn't registered on Discr yet.
+          </Text>
+          <Text style={[styles.smsInviteText, { marginTop: 8 }]}>
+            Would you like to send them a text inviting them to download the app?
+          </Text>
+        </RNView>
+
+        <Pressable style={styles.primaryButton} onPress={sendSmsInvite}>
+          <FontAwesome name="comment" size={18} color="#fff" />
+          <Text style={styles.primaryButtonText}>Send Invite Text</Text>
+        </Pressable>
+
+        <Pressable style={styles.textButton} onPress={resetScreen}>
+          <Text style={styles.textButtonText}>Maybe Later</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // Sending SMS State
+  if (screenState === 'sending_sms') {
+    return (
+      <View style={[styles.centerContainer, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
+        <ActivityIndicator size="large" color={Colors.violet.primary} />
+        <Text style={styles.loadingText}>Sending invite...</Text>
       </View>
     );
   }
@@ -1381,5 +2077,235 @@ const styles = StyleSheet.create({
   pendingOwner: {
     fontSize: 12,
     color: '#999',
+  },
+  // Visual recovery styles
+  photoRecoveryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: Colors.violet.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  photoRecoveryButtonText: {
+    color: Colors.violet.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  photoRecoveryHint: {
+    color: '#999',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  // Camera capture styles
+  captureButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.violet.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+  },
+  captureButtonInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#fff',
+  },
+  // Photo preview styles
+  previewContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  previewImagesRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  previewImageContainer: {
+    flex: 1,
+  },
+  previewImageLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  retakeButton: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  retakeButtonText: {
+    color: Colors.violet.primary,
+    fontSize: 14,
+  },
+  // Phone result styles
+  phoneResultCard: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  phoneConfidenceIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  phoneConfidenceText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  phoneDisplay: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    letterSpacing: 1,
+  },
+  phoneInputContainer: {
+    marginTop: 16,
+    width: '100%',
+  },
+  phoneInputLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  phoneInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 18,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  noPhoneText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  // Owner found styles
+  ownerCard: {
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+    marginBottom: 20,
+  },
+  ownerAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.violet.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  ownerAvatarText: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  ownerDisplayName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  ownerDiscCount: {
+    fontSize: 14,
+    color: '#666',
+  },
+  discMatchSection: {
+    marginTop: 16,
+    marginBottom: 20,
+  },
+  discMatchTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  discMatchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    marginBottom: 8,
+    gap: 12,
+  },
+  discMatchCardSelected: {
+    borderColor: Colors.violet.primary,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+  },
+  discMatchCardDefault: {
+    borderColor: '#eee',
+  },
+  discMatchPhoto: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  discMatchPhotoPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  discMatchInfo: {
+    flex: 1,
+  },
+  discMatchMold: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  discMatchManufacturer: {
+    fontSize: 14,
+    color: '#666',
+  },
+  discMatchColor: {
+    fontSize: 13,
+    color: '#888',
+    fontStyle: 'italic',
+  },
+  discMatchCheck: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.violet.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Owner not found styles
+  smsInviteCard: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  smsInviteText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });
