@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-import { StyleSheet, TouchableOpacity, Alert, ScrollView, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
+import { StyleSheet, TouchableOpacity, Alert, ScrollView, TextInput, ActivityIndicator, RefreshControl, Switch } from 'react-native';
 import { Image } from 'expo-image';
 import { Text, View } from '@/components/Themed';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,6 +29,8 @@ interface ProfileData {
   avatar_url: string | null;
   venmo_username: string | null;
   stripe_connect_status: ConnectStatus;
+  phone_number: string | null;
+  phone_discoverable: boolean;
 }
 
 interface ShippingAddressData {
@@ -69,6 +71,8 @@ export default function ProfileScreen() {
     avatar_url: null,
     venmo_username: null,
     stripe_connect_status: 'none',
+    phone_number: null,
+    phone_discoverable: false,
   });
   const [connectLoading, setConnectLoading] = useState(false);
   const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
@@ -78,9 +82,11 @@ export default function ProfileScreen() {
   const [editingUsername, setEditingUsername] = useState(false);
   const [editingFullName, setEditingFullName] = useState(false);
   const [editingVenmoUsername, setEditingVenmoUsername] = useState(false);
+  const [editingPhoneNumber, setEditingPhoneNumber] = useState(false);
   const [tempUsername, setTempUsername] = useState('');
   const [tempFullName, setTempFullName] = useState('');
   const [tempVenmoUsername, setTempVenmoUsername] = useState('');
+  const [tempPhoneNumber, setTempPhoneNumber] = useState('');
   const [discsReturned, setDiscsReturned] = useState(0);
   const [activeRecoveries, setActiveRecoveries] = useState<ActiveRecovery[]>([]);
   const [myFinds, setMyFinds] = useState<ActiveRecovery[]>([]);
@@ -146,7 +152,7 @@ export default function ProfileScreen() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('username, full_name, display_preference, throwing_hand, avatar_url, venmo_username, stripe_connect_status')
+        .select('username, full_name, display_preference, throwing_hand, avatar_url, venmo_username, stripe_connect_status, phone_number, phone_discoverable')
         .eq('id', user.id)
         .single();
 
@@ -161,6 +167,8 @@ export default function ProfileScreen() {
           avatar_url: data.avatar_url,
           venmo_username: data.venmo_username,
           stripe_connect_status: (data.stripe_connect_status as ConnectStatus) || 'none',
+          phone_number: data.phone_number,
+          phone_discoverable: data.phone_discoverable || false,
         });
 
         // If user has a custom avatar, fetch signed URL
@@ -409,6 +417,38 @@ export default function ProfileScreen() {
     saveProfile({ venmo_username: cleanUsername || null });
     setEditingVenmoUsername(false);
   };
+
+  // istanbul ignore next -- Form save callbacks tested via integration tests
+  const handleSavePhoneNumber = () => {
+    // Normalize phone number to E.164 format (+1XXXXXXXXXX)
+    let phone = tempPhoneNumber.trim().replace(/[\s\-\.\(\)]/g, '');
+    if (phone && !phone.startsWith('+')) {
+      // Assume US number if no country code
+      if (phone.length === 10) {
+        phone = '+1' + phone;
+      } else if (phone.length === 11 && phone.startsWith('1')) {
+        phone = '+' + phone;
+      }
+    }
+    saveProfile({ phone_number: phone || null });
+    setEditingPhoneNumber(false);
+  };
+
+  // istanbul ignore next -- Toggle callback tested via integration tests
+  const handleTogglePhoneDiscoverable = (value: boolean) => {
+    if (value && !profile.phone_number) {
+      Alert.alert(
+        'Phone Number Required',
+        'Please add your phone number first before enabling phone lookup.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    saveProfile({ phone_discoverable: value });
+  };
+
+  // istanbul ignore next -- Cancel editing handler
+  const handleCancelPhoneEdit = () => setEditingPhoneNumber(false);
 
   // istanbul ignore next -- Alert callback tested via integration tests
   const handleDisplayPreferenceChange = () => {
@@ -1220,6 +1260,73 @@ export default function ProfileScreen() {
           saving={saving}
         />
 
+        {/* Phone Recovery Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Phone Recovery</Text>
+          <Text style={styles.sectionDescription}>
+            Add your phone number so finders can return discs even without a QR code sticker.
+          </Text>
+
+          {/* Phone Number Input */}
+          <View style={styles.editableRow}>
+            <FontAwesome name="phone" size={16} color="#666" style={styles.detailIcon} />
+            <View style={styles.editableContent}>
+              <Text style={styles.detailLabel}>Phone Number</Text>
+              {editingPhoneNumber ? (
+                <View style={styles.editInputContainer}>
+                  <TextInput
+                    style={[styles.editInput, { backgroundColor: isDark ? '#333' : '#fff', color: isDark ? '#fff' : '#000' }]}
+                    value={tempPhoneNumber}
+                    onChangeText={setTempPhoneNumber}
+                    placeholder="(555) 123-4567"
+                    placeholderTextColor="#999"
+                    keyboardType="phone-pad"
+                    autoComplete="tel"
+                  />
+                  <TouchableOpacity onPress={handleSavePhoneNumber} disabled={saving}>
+                    <FontAwesome name="check" size={18} color={Colors.violet.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleCancelPhoneEdit} style={styles.cancelButton}>
+                    <FontAwesome name="times" size={18} color="#999" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.editableValue}
+                  onPress={() => {
+                    setTempPhoneNumber(profile.phone_number || '');
+                    setEditingPhoneNumber(true);
+                  }}>
+                  <Text style={profile.phone_number ? styles.detailValue : styles.placeholderValue}>
+                    {profile.phone_number || 'Add phone number'}
+                  </Text>
+                  <FontAwesome name="pencil" size={14} color="#999" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Phone Discoverable Toggle */}
+          <View style={[styles.editableRow, styles.rowBorder]}>
+            <FontAwesome name="search" size={16} color="#666" style={styles.detailIcon} />
+            <View style={styles.toggleContent}>
+              <View style={styles.toggleTextContainer}>
+                <Text style={styles.detailLabel}>Allow Phone Lookup</Text>
+                <Text style={styles.toggleDescription}>
+                  Let finders search for you by the phone number on your disc
+                </Text>
+              </View>
+              <Switch
+                value={profile.phone_discoverable}
+                onValueChange={handleTogglePhoneDiscoverable}
+                trackColor={{ false: '#767577', true: Colors.violet[200] }}
+                thumbColor={profile.phone_discoverable ? Colors.violet.primary : '#f4f3f4'}
+                disabled={saving}
+              />
+            </View>
+          </View>
+        </View>
+
         {/* Rewards & Payments Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Rewards & Payments</Text>
@@ -1991,5 +2098,21 @@ const styles = StyleSheet.create({
   paymentMethodRestrictedText: {
     fontSize: 13,
     color: '#ef4444',
+  },
+  // Phone toggle styles
+  toggleContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  toggleTextContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
+  toggleDescription: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
   },
 });
