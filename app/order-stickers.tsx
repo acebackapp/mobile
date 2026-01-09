@@ -724,7 +724,7 @@ export default function OrderStickersScreen() {
                     </Text>
                     {isSelected && (
                       <RNView style={styles.selectedCheckmark}>
-                        <FontAwesome name="check-circle" size={24} color="#fff" />
+                        <FontAwesome name="check" size={14} color="#fff" />
                       </RNView>
                     )}
                   </Pressable>
@@ -1178,8 +1178,14 @@ const styles = StyleSheet.create({
   },
   selectedCheckmark: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: -10,
+    right: -10,
+    backgroundColor: Colors.violet.primary,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inputLabel: {
     fontSize: 14,
