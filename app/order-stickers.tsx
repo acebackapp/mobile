@@ -318,7 +318,8 @@ export default function OrderStickersScreen() {
       borderColor: Colors.violet[400],
     },
     packageCardFeatured: {
-      backgroundColor: isDark ? Colors.violet[900] : Colors.violet[600],
+      // Featured but not selected - same as regular unselected
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
     },
     packageName: {
       color: isDark ? '#fff' : '#333',
@@ -703,27 +704,21 @@ export default function OrderStickersScreen() {
                     <Text style={[
                       styles.packageName,
                       dynamicStyles.packageName,
-                      isFeatured && !isSelected && styles.packageNameFeatured,
                     ]}>
                       {pkg.name}
                     </Text>
                     <Text style={[
                       styles.packagePrice,
                       dynamicStyles.packagePrice,
-                      isFeatured && !isSelected && styles.packagePriceFeatured,
                     ]}>
                       ${(pkg.priceCents / 100).toFixed(0)}
                     </Text>
-                    <Text style={[
-                      styles.packageQuantity,
-                      isFeatured && !isSelected && styles.packageQuantityFeatured,
-                    ]}>
+                    <Text style={styles.packageQuantity}>
                       {pkg.quantity} stickers
                     </Text>
                     <Text style={[
                       styles.packagePerSticker,
                       dynamicStyles.packagePerSticker,
-                      isFeatured && !isSelected && styles.packagePerStickerFeatured,
                     ]}>
                       ${(pkg.perStickerCents / 100).toFixed(2)}/ea
                     </Text>
@@ -1183,8 +1178,8 @@ const styles = StyleSheet.create({
   },
   selectedCheckmark: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: -8,
+    right: -8,
   },
   inputLabel: {
     fontSize: 14,
