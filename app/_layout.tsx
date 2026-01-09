@@ -7,7 +7,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect, useRef } from 'react';
-import { Alert, AppState, AppStateStatus, Pressable, useColorScheme as useRNColorScheme } from 'react-native';
+import { Alert, AppState, AppStateStatus, Pressable, useColorScheme as useRNColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useColorScheme } from '@/components/useColorScheme';
@@ -175,8 +175,11 @@ function RootLayoutNav() {
     }
   }, [loading]);
 
+  // Show a loading view with proper dark mode background instead of null
   if (loading) {
-    return null;
+    return (
+      <View style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#121212' : '#ffffff' }} />
+    );
   }
 
   return (
