@@ -1,0 +1,40 @@
+# My Orders - Cancel Order Test
+# Verifies users can cancel orders in pending_payment status
+# Prerequisites: Must have a pending_payment order
+appId: com.discr.app
+---
+- launchApp
+
+# Navigate to My Orders
+- tapOn: "My Orders"
+- waitForAnimationToEnd
+
+# Find a pending payment order
+- runFlow:
+    when:
+      visible: "Pending Payment"
+    commands:
+      # Verify Cancel button is visible for pending orders
+      - assertVisible: "Cancel"
+
+      # Tap Cancel button
+      - tapOn: "Cancel"
+
+      # Verify confirmation dialog
+      - assertVisible: "Cancel Order"
+      - assertVisible: "Are you sure"
+
+      # Confirm cancellation
+      - tapOn: "Cancel Order"
+
+      # Wait for update
+      - waitForAnimationToEnd
+
+      # Verify success message
+      - assertVisible: "Order Cancelled"
+
+      # Dismiss alert
+      - tapOn: "OK"
+
+      # Verify order shows as cancelled or is removed
+      - assertVisible: "Cancelled"

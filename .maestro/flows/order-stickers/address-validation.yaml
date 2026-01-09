@@ -1,0 +1,88 @@
+# Order Stickers - Address Validation Test
+# Verifies inline validation works on blur for all address fields
+appId: com.discr.app
+---
+- launchApp
+
+# Navigate to Order Stickers
+- tapOn: "Order Stickers"
+- waitForAnimationToEnd
+
+# Select a package first
+- tapOn: "Popular"
+
+# Scroll to address section
+- scrollUntilVisible:
+    element: "Name"
+    direction: DOWN
+
+# Test Name field validation
+- tapOn:
+    id: "name-input"
+- tapOn:
+    id: "street-input"
+- assertVisible: "Name is required"
+
+# Fill name and verify error clears
+- tapOn:
+    id: "name-input"
+- inputText: "Test User"
+- tapOn:
+    id: "street-input"
+- assertNotVisible: "Name is required"
+
+# Test Street Address validation
+- tapOn:
+    id: "city-input"
+- assertVisible: "Street address is required"
+
+# Fill street and continue
+- tapOn:
+    id: "street-input"
+- inputText: "123 Test Street"
+- tapOn:
+    id: "city-input"
+- assertNotVisible: "Street address is required"
+
+# Test City validation
+- tapOn:
+    id: "state-input"
+- assertVisible: "City is required"
+
+# Fill city
+- tapOn:
+    id: "city-input"
+- inputText: "Test City"
+
+# Test State validation
+- tapOn:
+    id: "state-input"
+- tapOn:
+    id: "postal-input"
+- assertVisible: "State is required"
+
+# Fill state
+- tapOn:
+    id: "state-input"
+- inputText: "CA"
+
+# Test Postal Code validation
+- tapOn:
+    id: "postal-input"
+- hideKeyboard
+- assertVisible: "Postal code is required"
+
+# Test invalid postal code
+- tapOn:
+    id: "postal-input"
+- inputText: "123"
+- hideKeyboard
+- assertVisible:
+    text: ".*invalid.*"
+    optional: true
+
+# Fill valid postal code
+- clearText
+- inputText: "12345"
+- hideKeyboard
+- assertNotVisible: "Postal code is required"

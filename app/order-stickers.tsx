@@ -20,13 +20,45 @@ import { Text, View } from '@/components/Themed';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Colors from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
-import { validateShippingAddress, ShippingAddress as ValidationAddress } from '@/lib/validation';
+import {
+  validateShippingAddress,
+  ShippingAddress as ValidationAddress,
+  validateStateCode,
+  validatePostalCode,
+} from '@/lib/validation';
+import { STRINGS } from '@/constants/strings';
 import { handleError, showSuccess } from '@/lib/errorHandler';
 
-const UNIT_PRICE_CENTS = 100; // $1.00 per sticker
-const MIN_QUANTITY = 1;
-const MAX_QUANTITY = 100;
 const SHIPPING_PRICE_CENTS = 0; // Free shipping
+
+// Package options matching web pricing
+const PACKAGE_OPTIONS = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    quantity: 5,
+    priceCents: 1000, // $10
+    perStickerCents: 200, // $2.00
+    description: 'Perfect for trying it out',
+  },
+  {
+    id: 'popular',
+    name: 'Popular',
+    quantity: 10,
+    priceCents: 1500, // $15
+    perStickerCents: 150, // $1.50
+    description: 'Most popular choice',
+    featured: true,
+  },
+  {
+    id: 'best-value',
+    name: 'Best Value',
+    quantity: 25,
+    priceCents: 2500, // $25
+    perStickerCents: 100, // $1.00
+    description: 'Cover your whole bag',
+  },
+];
 
 interface ShippingAddress {
   id?: string;
@@ -43,7 +75,7 @@ export default function OrderStickersScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const [quantity, setQuantity] = useState(5);
+  const [selectedPackage, setSelectedPackage] = useState(PACKAGE_OPTIONS[1]); // Default to "Popular"
   const [loading, setLoading] = useState(false);
   const [loadingAddress, setLoadingAddress] = useState(true);
   const [hasDefaultAddress, setHasDefaultAddress] = useState(false);
@@ -127,7 +159,7 @@ export default function OrderStickersScreen() {
   const inputRefs = [nameRef, streetRef, street2Ref, cityRef, stateRef, zipRef];
   const [currentInputIndex, setCurrentInputIndex] = useState(0);
 
-  const totalPriceCents = quantity * UNIT_PRICE_CENTS + SHIPPING_PRICE_CENTS;
+  const totalPriceCents = selectedPackage.priceCents + SHIPPING_PRICE_CENTS;
   const totalPriceDisplay = (totalPriceCents / 100).toFixed(2);
 
   // istanbul ignore next -- iOS keyboard navigation requires device testing
@@ -177,6 +209,74 @@ export default function OrderStickersScreen() {
   // istanbul ignore next -- Focus handlers for keyboard navigation require device testing
   const handlePostalCodeFocus = () => setCurrentInputIndex(5);
 
+  // Real-time validation on blur
+  // istanbul ignore next -- Blur handlers for real-time validation require device testing
+  const handleNameBlur = () => {
+    if (!address.name.trim()) {
+      setFieldErrors((prev) => ({ ...prev, name: STRINGS.VALIDATION.NAME_REQUIRED }));
+    } else {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.name;
+        return next;
+      });
+    }
+  };
+
+  // istanbul ignore next -- Blur handlers for real-time validation require device testing
+  const handleStreetBlur = () => {
+    if (!address.street_address.trim()) {
+      setFieldErrors((prev) => ({ ...prev, street_address: STRINGS.VALIDATION.STREET_REQUIRED }));
+    } else {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.street_address;
+        return next;
+      });
+    }
+  };
+
+  // istanbul ignore next -- Blur handlers for real-time validation require device testing
+  const handleCityBlur = () => {
+    if (!address.city.trim()) {
+      setFieldErrors((prev) => ({ ...prev, city: STRINGS.VALIDATION.CITY_REQUIRED }));
+    } else {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.city;
+        return next;
+      });
+    }
+  };
+
+  // istanbul ignore next -- Blur handlers for real-time validation require device testing
+  const handleStateBlur = () => {
+    const error = validateStateCode(address.state);
+    if (error) {
+      setFieldErrors((prev) => ({ ...prev, state: error }));
+    } else {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.state;
+        return next;
+      });
+    }
+  };
+
+  // istanbul ignore next -- Blur handlers for real-time validation require device testing
+  const handlePostalCodeBlur = () => {
+    const error = validatePostalCode(address.postal_code);
+    if (error) {
+      setFieldErrors((prev) => ({ ...prev, postal_code: error }));
+    } else {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.postal_code;
+        return next;
+      });
+    }
+  };
+
   // istanbul ignore next -- Submit editing handlers require device testing
   const handleNameSubmit = () => streetRef.current?.focus();
   // istanbul ignore next -- Submit editing handlers require device testing
@@ -200,11 +300,37 @@ export default function OrderStickersScreen() {
     },
     productImageContainer: {
       backgroundColor: isDark ? '#2a2a2a' : '#fff',
+      borderWidth: isDark ? 2 : 0,
+      borderColor: isDark ? Colors.violet[400] : 'transparent',
+    },
+    qrCodeIcon: {
+      color: isDark ? Colors.violet[300] : Colors.violet.primary,
     },
     productDescription: {
       color: isDark ? '#999' : '#666',
     },
-    pricePerUnit: {
+    packageCard: {
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+      borderColor: isDark ? '#333' : '#ddd',
+    },
+    packageCardSelected: {
+      backgroundColor: isDark ? Colors.violet[900] : Colors.violet[100],
+      borderColor: Colors.violet[400],
+    },
+    packageCardFeatured: {
+      // Featured but not selected - same as regular unselected
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+    },
+    packageName: {
+      color: isDark ? '#fff' : '#333',
+    },
+    packagePrice: {
+      color: isDark ? '#fff' : Colors.violet[900],
+    },
+    packagePerSticker: {
+      color: isDark ? '#999' : '#666',
+    },
+    packageDescription: {
       color: isDark ? '#999' : '#666',
     },
     inputLabel: {
@@ -220,10 +346,16 @@ export default function OrderStickersScreen() {
       borderColor: isDark ? '#333' : '#eee',
     },
     summaryLabel: {
-      color: isDark ? '#999' : '#666',
+      color: isDark ? '#ccc' : '#666',
     },
     summaryValue: {
-      color: isDark ? '#ccc' : '#333',
+      color: isDark ? '#fff' : '#333',
+    },
+    totalLabel: {
+      color: isDark ? '#fff' : '#000',
+    },
+    totalValue: {
+      color: isDark ? Colors.violet[300] : Colors.violet.primary,
     },
     checkoutContainer: {
       backgroundColor: isDark ? '#121212' : '#fff',
@@ -254,20 +386,6 @@ export default function OrderStickersScreen() {
     errorText: {
       color: '#e74c3c',
     },
-  };
-
-  // istanbul ignore next -- Quantity buttons tested via integration tests
-  const incrementQuantity = () => {
-    if (quantity < MAX_QUANTITY) {
-      setQuantity(quantity + 1);
-    }
-  };
-
-  // istanbul ignore next -- Quantity buttons tested via integration tests
-  const decrementQuantity = () => {
-    if (quantity > MIN_QUANTITY) {
-      setQuantity(quantity - 1);
-    }
   };
 
   // Client-side validation using our validation library
@@ -303,12 +421,19 @@ export default function OrderStickersScreen() {
       );
 
       if (!response.ok) {
-        // API error - let user proceed with unvalidated address
-        logger.error('USPS validation API error:', response.status);
+        // API error (503 = service unavailable) - let user proceed with unvalidated address
+        logger.warn('USPS validation unavailable, skipping:', response.status);
         return { valid: true };
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        // JSON parse error - let user proceed
+        logger.warn('USPS response parse error, skipping validation');
+        return { valid: true };
+      }
 
       if (!data.valid) {
         // Address is invalid
@@ -411,7 +536,7 @@ export default function OrderStickersScreen() {
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            quantity,
+            quantity: selectedPackage.quantity,
             shipping_address: {
               name: addressToUse.name.trim(),
               street_address: addressToUse.street_address.trim(),
@@ -549,7 +674,7 @@ export default function OrderStickersScreen() {
           {/* Product Info */}
           <RNView style={[styles.productCard, dynamicStyles.productCard]}>
             <RNView style={[styles.productImageContainer, dynamicStyles.productImageContainer]}>
-              <FontAwesome name="qrcode" size={64} color={Colors.violet.primary} />
+              <FontAwesome name="qrcode" size={64} color={dynamicStyles.qrCodeIcon.color} />
             </RNView>
             <Text style={styles.productTitle}>Discr QR Code Stickers</Text>
             <Text style={[styles.productDescription, dynamicStyles.productDescription]}>
@@ -558,31 +683,61 @@ export default function OrderStickersScreen() {
             </Text>
           </RNView>
 
-          {/* Quantity Selector */}
+          {/* Package Selection */}
           <RNView style={styles.section}>
-            <Text style={styles.sectionTitle}>Quantity</Text>
-            <RNView style={styles.quantityRow}>
-              <Pressable
-                style={[styles.quantityButton, quantity <= MIN_QUANTITY && styles.quantityButtonDisabled]}
-                onPress={decrementQuantity}
-                disabled={quantity <= MIN_QUANTITY}
-              >
-                <FontAwesome name="minus" size={16} color={quantity <= MIN_QUANTITY ? '#ccc' : Colors.violet.primary} />
-              </Pressable>
-              <RNView style={styles.quantityDisplay}>
-                <Text style={styles.quantityText}>{quantity}</Text>
-              </RNView>
-              <Pressable
-                style={[styles.quantityButton, quantity >= MAX_QUANTITY && styles.quantityButtonDisabled]}
-                onPress={incrementQuantity}
-                disabled={quantity >= MAX_QUANTITY}
-              >
-                <FontAwesome name="plus" size={16} color={quantity >= MAX_QUANTITY ? '#ccc' : Colors.violet.primary} />
-              </Pressable>
+            <Text style={styles.sectionTitle}>Select Package</Text>
+            <RNView style={styles.packageGrid}>
+              {PACKAGE_OPTIONS.map((pkg) => {
+                const isSelected = selectedPackage.id === pkg.id;
+                const isFeatured = pkg.featured;
+                return (
+                  <Pressable
+                    key={pkg.id}
+                    style={[
+                      styles.packageCard,
+                      dynamicStyles.packageCard,
+                      isSelected && styles.packageCardSelected,
+                      isSelected && dynamicStyles.packageCardSelected,
+                      isFeatured && !isSelected && styles.packageCardFeatured,
+                      isFeatured && !isSelected && dynamicStyles.packageCardFeatured,
+                    ]}
+                    onPress={() => setSelectedPackage(pkg)}
+                  >
+                    {isFeatured && (
+                      <RNView style={styles.featuredBadge}>
+                        <Text style={styles.featuredBadgeText}>Popular</Text>
+                      </RNView>
+                    )}
+                    <Text style={[
+                      styles.packageName,
+                      dynamicStyles.packageName,
+                    ]}>
+                      {pkg.name}
+                    </Text>
+                    <Text style={[
+                      styles.packagePrice,
+                      dynamicStyles.packagePrice,
+                    ]}>
+                      ${(pkg.priceCents / 100).toFixed(0)}
+                    </Text>
+                    <Text style={styles.packageQuantity}>
+                      {pkg.quantity} stickers
+                    </Text>
+                    <Text style={[
+                      styles.packagePerSticker,
+                      dynamicStyles.packagePerSticker,
+                    ]}>
+                      ${(pkg.perStickerCents / 100).toFixed(2)}/ea
+                    </Text>
+                    {isSelected && (
+                      <RNView style={styles.selectedCheckmark}>
+                        <FontAwesome name="check" size={14} color="#fff" />
+                      </RNView>
+                    )}
+                  </Pressable>
+                );
+              })}
             </RNView>
-            <Text style={[styles.pricePerUnit, dynamicStyles.pricePerUnit]}>
-              ${(UNIT_PRICE_CENTS / 100).toFixed(2)} per sticker
-            </Text>
           </RNView>
 
           {/* Shipping Address */}
@@ -592,10 +747,15 @@ export default function OrderStickersScreen() {
             <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>Full Name *</Text>
             <TextInput
               ref={nameRef}
-              style={[styles.input, dynamicStyles.input]}
+              style={[
+                styles.input,
+                dynamicStyles.input,
+                fieldErrors.name && styles.inputError,
+              ]}
               value={address.name}
               onChangeText={handleNameChange}
               onFocus={handleNameFocus}
+              onBlur={handleNameBlur}
               placeholder="John Doe"
               autoComplete="name"
               autoCapitalize="words"
@@ -603,20 +763,31 @@ export default function OrderStickersScreen() {
               onSubmitEditing={handleNameSubmit}
               inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
             />
+            {fieldErrors.name && (
+              <Text style={styles.fieldError}>{fieldErrors.name}</Text>
+            )}
 
             <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>Street Address *</Text>
             <TextInput
               ref={streetRef}
-              style={[styles.input, dynamicStyles.input]}
+              style={[
+                styles.input,
+                dynamicStyles.input,
+                fieldErrors.street_address && styles.inputError,
+              ]}
               value={address.street_address}
               onChangeText={handleStreetChange}
               onFocus={handleStreetFocus}
+              onBlur={handleStreetBlur}
               placeholder="123 Main St"
               autoComplete="street-address"
               returnKeyType="next"
               onSubmitEditing={handleStreetSubmit}
               inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
             />
+            {fieldErrors.street_address && (
+              <Text style={styles.fieldError}>{fieldErrors.street_address}</Text>
+            )}
 
             <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>Apt, Suite, etc.</Text>
             <TextInput
@@ -636,25 +807,38 @@ export default function OrderStickersScreen() {
                 <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>City *</Text>
                 <TextInput
                   ref={cityRef}
-                  style={[styles.input, dynamicStyles.input]}
+                  style={[
+                    styles.input,
+                    dynamicStyles.input,
+                    fieldErrors.city && styles.inputError,
+                  ]}
                   value={address.city}
                   onChangeText={handleCityChange}
                   onFocus={handleCityFocus}
+                  onBlur={handleCityBlur}
                   placeholder="City"
                   autoComplete="postal-address-locality"
                   returnKeyType="next"
                   onSubmitEditing={handleCitySubmit}
                   inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
                 />
+                {fieldErrors.city && (
+                  <Text style={styles.fieldError}>{fieldErrors.city}</Text>
+                )}
               </RNView>
               <RNView style={styles.stateInput}>
                 <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>State *</Text>
                 <TextInput
                   ref={stateRef}
-                  style={[styles.input, dynamicStyles.input]}
+                  style={[
+                    styles.input,
+                    dynamicStyles.input,
+                    fieldErrors.state && styles.inputError,
+                  ]}
                   value={address.state}
                   onChangeText={handleStateChange}
                   onFocus={handleStateFocus}
+                  onBlur={handleStateBlur}
                   placeholder="CA"
                   autoCapitalize="characters"
                   maxLength={2}
@@ -662,16 +846,25 @@ export default function OrderStickersScreen() {
                   onSubmitEditing={handleStateSubmit}
                   inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
                 />
+                {fieldErrors.state && (
+                  <Text style={styles.fieldError}>{fieldErrors.state}</Text>
+                )}
               </RNView>
             </RNView>
 
             <Text style={[styles.inputLabel, dynamicStyles.inputLabel]}>ZIP Code *</Text>
             <TextInput
               ref={zipRef}
-              style={[styles.input, dynamicStyles.input, styles.zipInput]}
+              style={[
+                styles.input,
+                dynamicStyles.input,
+                styles.zipInput,
+                fieldErrors.postal_code && styles.inputError,
+              ]}
               value={address.postal_code}
               onChangeText={handlePostalCodeChange}
               onFocus={handlePostalCodeFocus}
+              onBlur={handlePostalCodeBlur}
               placeholder="12345"
               keyboardType="numeric"
               autoComplete="postal-code"
@@ -679,6 +872,9 @@ export default function OrderStickersScreen() {
               returnKeyType="done"
               inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
             />
+            {fieldErrors.postal_code && (
+              <Text style={styles.fieldError}>{fieldErrors.postal_code}</Text>
+            )}
 
             {/* Save as default checkbox */}
             <Pressable
@@ -701,10 +897,10 @@ export default function OrderStickersScreen() {
             <Text style={styles.summaryTitle}>Order Summary</Text>
             <RNView style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, dynamicStyles.summaryLabel]}>
-                {quantity} sticker{quantity !== 1 ? 's' : ''}
+                {selectedPackage.name} ({selectedPackage.quantity} stickers)
               </Text>
               <Text style={[styles.summaryValue, dynamicStyles.summaryValue]}>
-                ${((quantity * UNIT_PRICE_CENTS) / 100).toFixed(2)}
+                ${(selectedPackage.priceCents / 100).toFixed(2)}
               </Text>
             </RNView>
             <RNView style={styles.summaryRow}>
@@ -713,8 +909,8 @@ export default function OrderStickersScreen() {
             </RNView>
             <View style={styles.summaryDivider} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
             <RNView style={styles.summaryRow}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>${totalPriceDisplay}</Text>
+              <Text style={[styles.totalLabel, dynamicStyles.totalLabel]}>Total</Text>
+              <Text style={[styles.totalValue, dynamicStyles.totalValue]}>${totalPriceDisplay}</Text>
             </RNView>
           </RNView>
 
@@ -925,36 +1121,78 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
-  quantityRow: {
+  packageGrid: {
     flexDirection: 'row',
+    gap: 12,
+  },
+  packageCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
+    position: 'relative',
   },
-  quantityButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.violet[100],
-    alignItems: 'center',
-    justifyContent: 'center',
+  packageCardSelected: {
+    borderWidth: 3,
   },
-  quantityButtonDisabled: {
-    backgroundColor: '#f0f0f0',
+  packageCardFeatured: {
+    // Keep same border as other unselected packages
   },
-  quantityDisplay: {
-    width: 80,
-    alignItems: 'center',
-    marginHorizontal: 16,
+  featuredBadge: {
+    position: 'absolute',
+    top: -10,
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
-  quantityText: {
-    fontSize: 32,
+  featuredBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  packageName: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  packageNameFeatured: {
+    color: '#fff',
+  },
+  packagePrice: {
+    fontSize: 28,
     fontWeight: 'bold',
-    color: Colors.violet.primary,
+    marginTop: 4,
   },
-  pricePerUnit: {
-    fontSize: 14,
-    textAlign: 'center',
+  packagePriceFeatured: {
+    color: '#fff',
+  },
+  packageQuantity: {
+    fontSize: 12,
+    color: Colors.violet[300],
+    marginTop: 2,
+  },
+  packageQuantityFeatured: {
+    color: 'rgba(255,255,255,0.9)',
+  },
+  packagePerSticker: {
+    fontSize: 11,
+    marginTop: 4,
+  },
+  packagePerStickerFeatured: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  selectedCheckmark: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: Colors.violet.primary,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inputLabel: {
     fontSize: 14,
@@ -967,7 +1205,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+  inputError: {
+    borderColor: '#e74c3c',
+    borderWidth: 2,
+  },
+  fieldError: {
+    color: '#e74c3c',
+    fontSize: 12,
+    marginBottom: 12,
+    marginTop: 2,
   },
   cityStateRow: {
     flexDirection: 'row',

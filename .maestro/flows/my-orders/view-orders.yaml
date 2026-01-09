@@ -1,0 +1,37 @@
+# My Orders - View Orders Test
+# Verifies the orders list displays correctly
+appId: com.discr.app
+---
+- launchApp
+
+# Navigate to My Orders (from profile or menu)
+- tapOn: "My Orders"
+- waitForAnimationToEnd
+
+# Verify orders screen loaded
+- assertVisible: "My Orders"
+
+# If orders exist, verify card structure
+- runFlow:
+    when:
+      visible:
+        text: "AB-.*"
+        regex: true
+    commands:
+      # Verify order card elements
+      - assertVisible:
+          text: "sticker"
+      - assertVisible:
+          text: "\\$.*"
+          regex: true
+      # Verify status badge is visible
+      - assertVisible:
+          text: "(Pending Payment|Processing|Shipped|Delivered)"
+          regex: true
+
+# If no orders, verify empty state
+- runFlow:
+    when:
+      visible: "No Orders Yet"
+    commands:
+      - assertVisible: "Order Stickers"

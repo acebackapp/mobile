@@ -43,3 +43,4 @@ yarn-error.*
 
 # test coverage
 /coverage
+.env.e2e

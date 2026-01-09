@@ -1,0 +1,15 @@
+# Sign In Flow
+# This flow is used as initFlow to authenticate before running other tests
+appId: com.discr.app
+---
+- launchApp:
+    clearState: true
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Check if we're on sign in screen or already logged in
+- runFlow:
+    when:
+      visible: "Sign In"
+    file: ../helpers/do-sign-in.yaml

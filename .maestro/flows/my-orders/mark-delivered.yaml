@@ -1,0 +1,39 @@
+# My Orders - Mark as Delivered Test
+# Verifies users can mark shipped orders (without tracking) as delivered
+# Prerequisites: Must have a shipped order without tracking number
+appId: com.discr.app
+---
+- launchApp
+
+# Navigate to My Orders
+- tapOn: "My Orders"
+- waitForAnimationToEnd
+
+# Find a shipped order (look for Shipped status)
+- assertVisible: "Shipped"
+
+# Look for Mark as Delivered button (only shows for shipped orders without tracking)
+- runFlow:
+    when:
+      visible: "Mark as Delivered"
+    commands:
+      # Tap the Mark as Delivered button
+      - tapOn: "Mark as Delivered"
+
+      # Verify confirmation dialog appears
+      - assertVisible: "Did you receive order"
+
+      # Confirm delivery
+      - tapOn: "Yes, Received"
+
+      # Wait for update
+      - waitForAnimationToEnd
+
+      # Verify success message
+      - assertVisible: "Order Delivered"
+
+      # Dismiss alert
+      - tapOn: "OK"
+
+      # Verify order now shows as Delivered
+      - assertVisible: "Delivered"
