@@ -1,6 +1,14 @@
 import React from 'react';
 import { render, waitFor, fireEvent } from '@testing-library/react-native';
+import { Alert, Linking } from 'react-native';
 import MyOrdersScreen from '../app/my-orders';
+
+// Mock Alert
+jest.spyOn(Alert, 'alert');
+
+// Mock Linking
+jest.spyOn(Linking, 'canOpenURL').mockResolvedValue(true);
+jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
 
 // Mock expo-router
 const mockRouterPush = jest.fn();
@@ -54,6 +62,22 @@ const mockOrderWithTracking = {
   order_number: 'ORD-12346',
   status: 'shipped',
   tracking_number: '1Z999AA10123456784',
+  shipped_at: '2024-01-16T10:00:00Z',
+};
+
+const mockPendingPaymentOrder = {
+  ...mockOrder,
+  id: 'order-3',
+  order_number: 'ORD-12347',
+  status: 'pending_payment',
+};
+
+const mockShippedNoTrackingOrder = {
+  ...mockOrder,
+  id: 'order-4',
+  order_number: 'ORD-12348',
+  status: 'shipped',
+  tracking_number: null,
   shipped_at: '2024-01-16T10:00:00Z',
 };
 
@@ -207,7 +231,7 @@ describe('MyOrdersScreen', () => {
   });
 
   it('displays different statuses correctly', async () => {
-    const processingOrder = { ...mockOrder, id: 'order-3', status: 'processing' };
+    const processingOrder = { ...mockOrder, id: 'order-5', status: 'processing' };
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ orders: [processingOrder] }),
@@ -217,6 +241,50 @@ describe('MyOrdersScreen', () => {
 
     await waitFor(() => {
       expect(getByText('Processing')).toBeTruthy();
+    });
+  });
+
+  describe('Action Buttons', () => {
+    it('shows Complete Payment and Cancel buttons for pending_payment orders', async () => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ orders: [mockPendingPaymentOrder] }),
+      });
+
+      const { getByText } = render(<MyOrdersScreen />);
+
+      await waitFor(() => {
+        expect(getByText('Complete Payment')).toBeTruthy();
+        expect(getByText('Cancel')).toBeTruthy();
+      });
+    });
+
+    it('shows Mark as Delivered button for shipped orders without tracking', async () => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ orders: [mockShippedNoTrackingOrder] }),
+      });
+
+      const { getByText } = render(<MyOrdersScreen />);
+
+      await waitFor(() => {
+        expect(getByText('Mark as Delivered')).toBeTruthy();
+      });
+    });
+
+    it('does not show Mark as Delivered for shipped orders with tracking', async () => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ orders: [mockOrderWithTracking] }),
+      });
+
+      const { queryByText, getByText } = render(<MyOrdersScreen />);
+
+      await waitFor(() => {
+        expect(getByText('Shipped')).toBeTruthy();
+      });
+
+      expect(queryByText('Mark as Delivered')).toBeNull();
     });
   });
 });
