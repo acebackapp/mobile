@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   View as RNView,
   useColorScheme,
+  Alert,
+  Linking,
 } from 'react-native';
 import { useRouter, Stack, useFocusEffect } from 'expo-router';
 import { Text, View } from '@/components/Themed';
@@ -15,6 +17,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Colors from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { OrderCardSkeleton } from '@/components/Skeleton';
+import { handleError } from '@/lib/errorHandler';
 
 type FontAwesomeIconName = ComponentProps<typeof FontAwesome>['name'];
 
@@ -55,6 +58,7 @@ export default function MyOrdersScreen() {
   const [orders, setOrders] = useState<StickerOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [resumingPayment, setResumingPayment] = useState<string | null>(null);
 
   const dynamicStyles = {
     container: {
@@ -131,6 +135,53 @@ export default function MyOrdersScreen() {
     fetchOrders(true);
   }, []);
 
+  // istanbul ignore next -- Resume payment tested via integration tests
+  const handleResumePayment = async (orderId: string) => {
+    setResumingPayment(orderId);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        Alert.alert('Error', 'Please sign in to complete payment');
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/resume-sticker-checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ order_id: orderId }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to resume checkout');
+      }
+
+      const data = await response.json();
+
+      if (data.checkout_url) {
+        const supported = await Linking.canOpenURL(data.checkout_url);
+        if (supported) {
+          await Linking.openURL(data.checkout_url);
+        } else {
+          throw new Error('Cannot open checkout URL');
+        }
+      }
+    } catch (error) {
+      handleError(error, { operation: 'resume-payment' });
+    } finally {
+      setResumingPayment(null);
+    }
+  };
+
   const renderOrderCard = ({ item }: { item: StickerOrder }) => {
     const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.paid;
 
@@ -172,6 +223,26 @@ export default function MyOrdersScreen() {
             <FontAwesome name="truck" size={14} color={Colors.violet.primary} />
             <Text style={styles.trackingText}>Tracking: {item.tracking_number}</Text>
           </RNView>
+        )}
+
+        {item.status === 'pending_payment' && (
+          <Pressable
+            style={[styles.completePaymentButton, resumingPayment === item.id && styles.buttonDisabled]}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleResumePayment(item.id);
+            }}
+            disabled={resumingPayment === item.id}
+          >
+            {resumingPayment === item.id ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <FontAwesome name="credit-card" size={14} color="#fff" />
+                <Text style={styles.completePaymentText}>Complete Payment</Text>
+              </>
+            )}
+          </Pressable>
         )}
 
         <RNView style={styles.chevronContainer}>
@@ -315,6 +386,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.violet.primary,
     fontWeight: '500',
+  },
+  completePaymentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#F39C12',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  completePaymentText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   chevronContainer: {
     position: 'absolute',
