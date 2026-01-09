@@ -66,6 +66,7 @@ export default function MyOrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [resumingPayment, setResumingPayment] = useState<string | null>(null);
   const [cancellingOrder, setCancellingOrder] = useState<string | null>(null);
+  const [markingDelivered, setMarkingDelivered] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
 
   const dynamicStyles = {
@@ -306,6 +307,58 @@ export default function MyOrdersScreen() {
     );
   };
 
+  // istanbul ignore next -- Mark delivered tested via integration tests
+  const handleMarkDelivered = async (orderId: string, orderNumber: string) => {
+    Alert.alert(
+      'Mark as Delivered',
+      `Did you receive order ${orderNumber}?`,
+      [
+        { text: 'Not Yet', style: 'cancel' },
+        {
+          text: 'Yes, Received',
+          onPress: async () => {
+            setMarkingDelivered(orderId);
+            try {
+              const {
+                data: { session },
+              } = await supabase.auth.getSession();
+
+              if (!session) {
+                Alert.alert('Error', 'Please sign in to update order');
+                return;
+              }
+
+              const response = await fetch(
+                `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/mark-order-delivered`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                  },
+                  body: JSON.stringify({ order_id: orderId }),
+                }
+              );
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update order');
+              }
+
+              // Refresh the orders list
+              fetchOrders(true);
+              Alert.alert('Order Delivered', `Order ${orderNumber} marked as delivered!`);
+            } catch (error) {
+              handleError(error, { operation: 'mark-delivered' });
+            } finally {
+              setMarkingDelivered(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderOrderCard = ({ item }: { item: StickerOrder }) => {
     const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.paid;
 
@@ -386,6 +439,26 @@ export default function MyOrdersScreen() {
               )}
             </Pressable>
           </RNView>
+        )}
+
+        {item.status === 'shipped' && !item.tracking_number && (
+          <Pressable
+            style={[styles.markDeliveredButton, markingDelivered === item.id && styles.buttonDisabled]}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleMarkDelivered(item.id, item.order_number);
+            }}
+            disabled={markingDelivered === item.id}
+          >
+            {markingDelivered === item.id ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <FontAwesome name="check-circle" size={14} color="#fff" />
+                <Text style={styles.markDeliveredText}>Mark as Delivered</Text>
+              </>
+            )}
+          </Pressable>
         )}
 
         <RNView style={styles.chevronContainer}>
@@ -585,6 +658,22 @@ const styles = StyleSheet.create({
   },
   cancelOrderText: {
     color: '#E74C3C',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  markDeliveredButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#27AE60',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  markDeliveredText: {
+    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },

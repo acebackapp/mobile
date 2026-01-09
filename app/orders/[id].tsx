@@ -114,6 +114,7 @@ export default function OrderDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [resumingPayment, setResumingPayment] = useState(false);
   const [cancellingOrder, setCancellingOrder] = useState(false);
+  const [markingDelivered, setMarkingDelivered] = useState(false);
 
   const dynamicStyles = {
     container: {
@@ -343,6 +344,54 @@ export default function OrderDetailScreen() {
     );
   };
 
+  const handleMarkDelivered = () => {
+    if (!order) return;
+    Alert.alert('Mark as Delivered', `Did you receive order ${order.order_number}?`, [
+      { text: 'Not Yet', style: 'cancel' },
+      {
+        text: 'Yes, Received',
+        onPress: async () => {
+          setMarkingDelivered(true);
+          try {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+
+            if (!session) {
+              Alert.alert('Error', 'Please sign in to update order');
+              return;
+            }
+
+            const response = await fetch(
+              `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/mark-order-delivered`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ order_id: order.id }),
+              }
+            );
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.error || 'Failed to update order');
+            }
+
+            // Refresh order data
+            fetchOrder(true);
+            Alert.alert('Order Delivered', `Order ${order.order_number} marked as delivered!`);
+          } catch (error) {
+            handleError(error, { operation: 'mark-delivered' });
+          } finally {
+            setMarkingDelivered(false);
+          }
+        },
+      },
+    ]);
+  };
+
   if (loading) {
     return (
       <>
@@ -427,6 +476,24 @@ export default function OrderDetailScreen() {
                 )}
               </Pressable>
             </RNView>
+          )}
+          {order.status === 'shipped' && !order.tracking_number && (
+            <Pressable
+              style={[styles.markDeliveredButton, markingDelivered && styles.buttonDisabled]}
+              onPress={handleMarkDelivered}
+              disabled={markingDelivered}
+            >
+              {markingDelivered ? (
+                <ActivityIndicator size="small" color={statusConfig.color} />
+              ) : (
+                <>
+                  <FontAwesome name="check-circle" size={14} color={statusConfig.color} />
+                  <Text style={[styles.markDeliveredText, { color: statusConfig.color }]}>
+                    Mark as Delivered
+                  </Text>
+                </>
+              )}
+            </Pressable>
           )}
         </RNView>
 
@@ -656,6 +723,20 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  markDeliveredButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 16,
+  },
+  markDeliveredText: {
     fontSize: 14,
     fontWeight: '600',
   },
