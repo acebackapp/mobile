@@ -86,6 +86,9 @@ export default function MyOrdersScreen() {
     trackingRow: {
       borderTopColor: isDark ? '#333' : '#f0f0f0',
     },
+    chevronContainer: {
+      borderLeftColor: isDark ? '#333' : 'rgba(150, 150, 150, 0.2)',
+    },
     emptyDescription: {
       color: isDark ? '#999' : '#666',
     },
@@ -442,28 +445,26 @@ export default function MyOrdersScreen() {
         )}
 
         {item.status === 'shipped' && !item.tracking_number && (
-          <RNView style={[styles.markDeliveredSection, dynamicStyles.trackingRow]}>
-            <Pressable
-              style={[styles.markDeliveredButton, markingDelivered === item.id && styles.buttonDisabled]}
-              onPress={(e) => {
-                e.stopPropagation();
-                handleMarkDelivered(item.id, item.order_number);
-              }}
-              disabled={markingDelivered === item.id}
-            >
-              {markingDelivered === item.id ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <FontAwesome name="check-circle" size={14} color="#fff" />
-                  <Text style={styles.markDeliveredText}>Mark as Delivered</Text>
-                </>
-              )}
-            </Pressable>
-          </RNView>
+          <Pressable
+            style={[styles.markDeliveredButton, markingDelivered === item.id && styles.buttonDisabled]}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleMarkDelivered(item.id, item.order_number);
+            }}
+            disabled={markingDelivered === item.id}
+          >
+            {markingDelivered === item.id ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <FontAwesome name="check-circle" size={14} color="#fff" />
+                <Text style={styles.markDeliveredText}>Mark as Delivered</Text>
+              </>
+            )}
+          </Pressable>
         )}
 
-        <RNView style={styles.chevronContainer}>
+        <RNView style={[styles.chevronContainer, dynamicStyles.chevronContainer]}>
           <FontAwesome name="chevron-right" size={14} color="#ccc" />
         </RNView>
       </Pressable>
@@ -663,11 +664,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  markDeliveredSection: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-  },
   markDeliveredButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -677,6 +673,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
+    marginTop: 12,
   },
   markDeliveredText: {
     color: '#fff',
@@ -688,8 +685,14 @@ const styles = StyleSheet.create({
   },
   chevronContainer: {
     position: 'absolute',
-    right: 16,
-    top: 32,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(150, 150, 150, 0.2)',
   },
   emptyState: {
     flex: 1,
