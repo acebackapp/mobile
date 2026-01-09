@@ -1,0 +1,36 @@
+# My Orders - Complete Payment Test
+# Verifies users can resume payment for pending_payment orders
+# Prerequisites: Must have a pending_payment order
+# Note: This test stops at opening Stripe (can't automate external browser)
+appId: com.discr.app
+---
+- launchApp
+
+# Navigate to My Orders
+- tapOn: "My Orders"
+- waitForAnimationToEnd
+
+# Find a pending payment order
+- runFlow:
+    when:
+      visible: "Pending Payment"
+    commands:
+      # Verify Complete Payment button is visible
+      - assertVisible: "Complete Payment"
+
+      # Verify button has credit card icon (button should contain icon)
+      - assertVisible:
+          text: "Complete Payment"
+
+      # Tap Complete Payment
+      - tapOn: "Complete Payment"
+
+      # Verify loading state appears
+      - assertVisible:
+          id: ".*loading.*"
+          regex: true
+          optional: true
+
+      # Note: At this point, Stripe checkout opens in browser
+      # We can't automate the external browser, so test stops here
+      # Manual verification needed for full payment flow

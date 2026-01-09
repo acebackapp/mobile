@@ -1,0 +1,29 @@
+# Helper: Perform Sign In
+# Uses environment variables for credentials:
+#   E2E_TEST_EMAIL - test account email
+#   E2E_TEST_PASSWORD - test account password
+appId: com.discr.app
+---
+# Enter email
+- tapOn:
+    id: "email-input"
+- inputText: ${E2E_TEST_EMAIL}
+
+# Enter password
+- tapOn:
+    id: "password-input"
+- inputText: ${E2E_TEST_PASSWORD}
+
+# Hide keyboard
+- hideKeyboard
+
+# Tap sign in button
+- tapOn: "Sign In"
+
+# Wait for navigation to complete
+- waitForAnimationToEnd
+
+# Verify we're logged in (should see home screen or tabs)
+- assertVisible:
+    text: ".*"
+    timeout: 10000

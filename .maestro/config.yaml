@@ -1,0 +1,12 @@
+# Maestro E2E Test Configuration
+# https://maestro.mobile.dev/
+
+# App identifiers
+appId: com.discr.app
+
+# Test execution settings
+flows:
+  - flows/
+
+# Default settings
+initFlow: flows/auth/sign-in.yaml

@@ -1,0 +1,37 @@
+# Order Stickers - Package Selection Test
+# Verifies the 3-tier package selection UI works correctly
+appId: com.discr.app
+---
+- launchApp
+
+# Navigate to Order Stickers
+- tapOn: "Order Stickers"
+- waitForAnimationToEnd
+
+# Verify all 3 packages are visible
+- assertVisible: "Starter"
+- assertVisible: "5 stickers"
+- assertVisible: "$10"
+
+- assertVisible: "Popular"
+- assertVisible: "10 stickers"
+- assertVisible: "$15"
+
+- assertVisible: "Best Value"
+- assertVisible: "25 stickers"
+- assertVisible: "$25"
+
+# Test selecting Starter package
+- tapOn: "Starter"
+- assertVisible: "$10.00"
+
+# Test selecting Popular package
+- tapOn: "Popular"
+- assertVisible: "$15.00"
+
+# Test selecting Best Value package
+- tapOn: "Best Value"
+- assertVisible: "$25.00"
+
+# Verify Popular is marked as featured (has badge or highlight)
+- assertVisible: "Most Popular"
