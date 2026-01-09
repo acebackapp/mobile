@@ -381,7 +381,6 @@ export default function MyOrdersScreen() {
           </RNView>
         </RNView>
 
-        <View style={styles.orderDivider} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
 
         <RNView style={styles.orderDetails}>
           <RNView style={styles.orderDetailItem}>
@@ -560,7 +559,7 @@ const styles = StyleSheet.create({
   },
   orderCard: {
     padding: 16,
-    paddingRight: 48,
+    paddingRight: 64,
     marginBottom: 12,
     borderRadius: 12,
     borderWidth: 1,
@@ -574,7 +573,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   orderNumber: {
     fontSize: 16,
@@ -596,10 +595,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
-  },
-  orderDivider: {
-    height: 1,
-    marginBottom: 12,
   },
   orderDetails: {
     flexDirection: 'row',
