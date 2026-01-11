@@ -117,28 +117,41 @@ jobs:
         if: ${{ github.event.inputs.skip_cache != 'true' }}
         uses: actions/cache/restore@v4
         with:
-          path: ios/build/Build/Products/Release-iphonesimulator
-          key: ios-build-${{ steps.build-key.outputs.hash }}
+          path: ios/build/Build/Products/Release-iphonesimulator/*.app
+          key: ios-build-arm64-${{ steps.build-key.outputs.hash }}
+
+      # Cache 3: CocoaPods
+      - name: Cache CocoaPods
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            pods-
 
       - name: Install Pods
         if: steps.build-cache.outputs.cache-hit != 'true'
         run: |
           cd ios
-          pod install
+          pod install --deployment
 
       - name: Build iOS app
         if: steps.build-cache.outputs.cache-hit != 'true'
         run: |
           cd ios
           # Build for simulator without code signing
+          # Only build for arm64 (Apple Silicon) to speed up build
           xcodebuild \
             -workspace Discr.xcworkspace \
             -scheme Discr \
             -configuration Release \
             -sdk iphonesimulator \
-            -destination "id=${{ steps.simulator.outputs.udid }}" \
+            -arch arm64 \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=YES \
             -derivedDataPath build \
             build
         env:
@@ -149,13 +162,18 @@ jobs:
         if: steps.build-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: ios/build/Build/Products/Release-iphonesimulator
-          key: ios-build-${{ steps.build-key.outputs.hash }}
+          path: ios/build/Build/Products/Release-iphonesimulator/*.app
+          key: ios-build-arm64-${{ steps.build-key.outputs.hash }}
 
       - name: Install app on simulator
         run: |
           # Find and install the .app
-          APP_PATH=$(find ios/build/Build/Products/Release-iphonesimulator -name "*.app" -type d | head -1)
+          APP_PATH=$(find ios/build -name "*.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: No .app found in ios/build"
+            find ios/build -type d -name "*.app" 2>/dev/null || echo "No .app directories found"
+            exit 1
+          fi
           echo "Installing app: $APP_PATH"
           xcrun simctl install "${{ steps.simulator.outputs.udid }}" "$APP_PATH"
           # Launch the app
