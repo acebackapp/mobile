@@ -13,6 +13,11 @@ on:
         description: 'Specific flow to run (leave empty for all)'
         required: false
         default: ''
+      skip_cache:
+        description: 'Skip build cache (force rebuild)'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: read
@@ -21,7 +26,7 @@ jobs:
   e2e:
     name: Maestro E2E Tests
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
@@ -54,8 +59,6 @@ jobs:
         id: simulator
         run: |
           # List available simulators and find the first iPhone
-          # The format is: "    iPhone 15 Pro (UDID) (Shutdown)"
-          # We need to extract the UDID (first parenthesized value, which is a UUID)
           DEVICE_LINE=$(xcrun simctl list devices available | grep -E "iPhone [0-9]+" | head -1)
           echo "Found device line: $DEVICE_LINE"
 
@@ -70,13 +73,79 @@ jobs:
           # Wait for simulator to be ready
           sleep 10
 
-      - name: Build and install app
+      # Cache 1: Expo prebuild (ios/ folder with native code)
+      - name: Generate prebuild cache key
+        id: prebuild-key
         run: |
-          # Build for the booted simulator (avoids code signing requirements)
+          # Hash files that affect native code generation
+          HASH=$(cat package-lock.json app.json | shasum -a 256 | cut -d' ' -f1)
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+
+      - name: Restore Expo prebuild cache
+        id: prebuild-cache
+        if: ${{ github.event.inputs.skip_cache != 'true' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ios
+          key: expo-prebuild-${{ steps.prebuild-key.outputs.hash }}
+
+      - name: Run Expo prebuild
+        if: steps.prebuild-cache.outputs.cache-hit != 'true'
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Save Expo prebuild cache
+        if: steps.prebuild-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ios
+          key: expo-prebuild-${{ steps.prebuild-key.outputs.hash }}
+
+      # Cache 2: Compiled .app bundle
+      - name: Generate build cache key
+        id: build-key
+        run: |
+          # Hash files that affect the final build
+          # Include ios/ folder state, source files, and env vars
+          FILES_HASH=$(find ios -type f -name "*.swift" -o -name "*.m" -o -name "*.h" -o -name "Podfile.lock" 2>/dev/null | sort | xargs cat 2>/dev/null | shasum -a 256 | cut -d' ' -f1 || echo "no-ios")
+          SRC_HASH=$(find app components lib -type f -name "*.ts" -o -name "*.tsx" 2>/dev/null | sort | xargs cat 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
+          echo "hash=${FILES_HASH:0:16}-${SRC_HASH:0:16}" >> $GITHUB_OUTPUT
+
+      - name: Restore build cache
+        id: build-cache
+        if: ${{ github.event.inputs.skip_cache != 'true' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ios/build/Build/Products/Release-iphonesimulator
+          key: ios-build-${{ steps.build-key.outputs.hash }}
+
+      - name: Install Pods
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          cd ios
+          pod install
+
+      - name: Build iOS app
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
           npx expo run:ios --device "${{ steps.simulator.outputs.udid }}" --configuration Release
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Save build cache
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ios/build/Build/Products/Release-iphonesimulator
+          key: ios-build-${{ steps.build-key.outputs.hash }}
+
+      - name: Install cached app on simulator
+        if: steps.build-cache.outputs.cache-hit == 'true'
+        run: |
+          # Find and install the .app from cache
+          APP_PATH=$(find ios/build/Build/Products/Release-iphonesimulator -name "*.app" -type d | head -1)
+          echo "Installing cached app: $APP_PATH"
+          xcrun simctl install "${{ steps.simulator.outputs.udid }}" "$APP_PATH"
 
       - name: Run E2E Tests
         run: |
@@ -98,14 +167,3 @@ jobs:
             ~/.maestro/tests/
             ~/Library/Logs/DiagnosticReports/
           retention-days: 7
-
-  # Alternative: Run on Maestro Cloud (faster, parallel, but requires subscription)
-  # e2e-cloud:
-  #   name: Maestro Cloud E2E
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: mobile-dev-inc/action-maestro-cloud@v1
-  #       with:
-  #         api-key: ${{ secrets.MAESTRO_CLOUD_API_KEY }}
-  #         app-file: path/to/app.ipa
