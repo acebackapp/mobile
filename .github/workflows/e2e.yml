@@ -156,6 +156,8 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          # Skip Sentry source map upload in CI (no auth token)
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
 
       - name: Save build cache
         if: steps.build-cache.outputs.cache-hit != 'true'
