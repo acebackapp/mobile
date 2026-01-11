@@ -190,7 +190,8 @@ jobs:
           if [ -n "${{ github.event.inputs.flow }}" ]; then
             maestro test "${{ github.event.inputs.flow }}"
           else
-            maestro test .maestro/flows/
+            # Run specific flow subdirectories (exclude helpers)
+            maestro test .maestro/flows/auth .maestro/flows/order-stickers .maestro/flows/my-orders
           fi
         env:
           E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
