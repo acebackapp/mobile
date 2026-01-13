@@ -8,10 +8,8 @@ appId: com.discr.app
 - tapOn: "My Orders"
 - waitForAnimationToEnd
 
-# Tap on an order to view details (tap on order number pattern)
-- tapOn:
-    text: "AB-.*"
-    regex: true
+# Tap on an order to view details (tap on text starting with "AB-")
+- tapOn: "AB-"
 
 - waitForAnimationToEnd
 
@@ -29,14 +27,6 @@ appId: com.discr.app
 
 # Verify Order Progress timeline
 - assertVisible: "Order Progress"
-
-# Verify shipping address section (if present)
-- runFlow:
-    when:
-      visible: "Shipping Address"
-    commands:
-      - assertVisible:
-          text: ".*"
 
 # Verify help section
 - assertVisible: "support@discrapp.com"

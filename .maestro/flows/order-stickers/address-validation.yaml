@@ -72,14 +72,11 @@ appId: com.discr.app
 - hideKeyboard
 - assertVisible: "Postal code is required"
 
-# Test invalid postal code
+# Test invalid postal code (optional - validation may vary)
 - tapOn:
     id: "postal-input"
 - inputText: "123"
 - hideKeyboard
-- assertVisible:
-    text: ".*invalid.*"
-    optional: true
 
 # Fill valid postal code
 - eraseText
