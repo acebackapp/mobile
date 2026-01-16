@@ -14,8 +14,11 @@ appId: com.discr.app
       visible: "Sign In"
     file: do-sign-in.yaml
 
-# Wait for home screen content to be visible
-# This ensures we're ready to interact regardless of sign-in state
+# Wait for home tab to be visible (indicates app is loaded and on tabs)
 - extendedWaitUntil:
-    visible: "Protect Your Discs"
+    visible: "Home"
     timeout: 15000
+
+# Tap Home tab to ensure we're on the home screen
+- tapOn: "Home"
+- waitForAnimationToEnd
