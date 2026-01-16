@@ -2,11 +2,8 @@
 name: E2E Tests
 
 on:
-  # Run on push to main after PRs are merged
-  push:
-    branches:
-      - main
-  # Allow manual trigger for testing
+  # Manual trigger only - e2e tests are slow (~10 min)
+  # Run when you need to verify critical flows work
   workflow_dispatch:
     inputs:
       flow:
