@@ -13,7 +13,7 @@ appId: com.discr.app
         - "Home"
         - "My Bag"
         - "Profile"
-    timeout: 30000
+    timeout: 15000
 
 # Sign in if needed
 - runFlow:
