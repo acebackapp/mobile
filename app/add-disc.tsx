@@ -119,6 +119,7 @@ export default function AddDiscScreen() {
   // Entry mode selection
   type EntryMode = 'qr' | 'photo-ai' | 'manual' | null;
   const [entryMode, setEntryMode] = useState<EntryMode>(null);
+  const [showOptionsModal, setShowOptionsModal] = useState(true);
 
   // AI Identification
   const { identify, isLoading: isIdentifying, error: identifyError, result: identificationResult, reset: resetIdentification } = useDiscIdentification();
@@ -396,6 +397,7 @@ export default function AddDiscScreen() {
   // Entry mode handlers
   const handleSelectEntryMode = (mode: EntryMode) => {
     setEntryMode(mode);
+    setShowOptionsModal(false);
 
     if (mode === 'qr') {
       startQrScanning();
@@ -651,56 +653,72 @@ export default function AddDiscScreen() {
   return (
     <View style={[styles.screenContainer, dynamicContainerStyle]}>
       {/* Entry Mode Selection - shown as initial screen content */}
-      {entryMode === null && (
-        <View style={styles.optionsContainer}>
-          <Text style={[styles.optionsTitle, { color: textColor }]}>How would you like to add your disc?</Text>
+      {/* Entry Mode Options Modal */}
+      <Modal
+        visible={showOptionsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => router.back()}>
+        <View style={[styles.optionsModalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+          <View style={[styles.optionsModalContent, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+            <Text style={[styles.optionsModalTitle, { color: textColor }]}>Add a Disc</Text>
+            <Text style={[styles.optionsModalSubtitle, { color: isDark ? '#999' : '#666' }]}>
+              How would you like to add your disc?
+            </Text>
 
-          <Pressable
-            style={[styles.optionCard, { backgroundColor: isDark ? '#1e1e1e' : '#f8f8f8', borderColor: isDark ? '#333' : '#e0e0e0' }]}
-            onPress={() => handleSelectEntryMode('qr')}>
-            <View style={[styles.optionIconContainer, { backgroundColor: 'rgba(127, 34, 206, 0.1)' }]}>
-              <FontAwesome name="qrcode" size={28} color={Colors.violet.primary} />
-            </View>
-            <View style={styles.optionTextContainer}>
-              <Text style={[styles.optionTitle, { color: textColor }]}>Scan QR Sticker</Text>
-              <Text style={[styles.optionDescription, { color: isDark ? '#999' : '#666' }]}>
-                Link a Discr sticker to this disc
-              </Text>
-            </View>
-            <FontAwesome name="chevron-right" size={16} color="#999" />
-          </Pressable>
+            <Pressable
+              style={[styles.optionCard, { backgroundColor: isDark ? '#252525' : '#f8f8f8', borderColor: isDark ? '#333' : '#e0e0e0' }]}
+              onPress={() => handleSelectEntryMode('qr')}>
+              <View style={[styles.optionIconContainer, { backgroundColor: 'rgba(127, 34, 206, 0.1)' }]}>
+                <FontAwesome name="qrcode" size={28} color={Colors.violet.primary} />
+              </View>
+              <View style={styles.optionTextContainer}>
+                <Text style={[styles.optionTitle, { color: textColor }]}>Scan QR Sticker</Text>
+                <Text style={[styles.optionDescription, { color: isDark ? '#999' : '#666' }]}>
+                  Link a Discr sticker to this disc
+                </Text>
+              </View>
+              <FontAwesome name="chevron-right" size={16} color="#999" />
+            </Pressable>
 
-          <Pressable
-            style={[styles.optionCard, { backgroundColor: isDark ? '#1e1e1e' : '#f8f8f8', borderColor: isDark ? '#333' : '#e0e0e0' }]}
-            onPress={() => handleSelectEntryMode('photo-ai')}>
-            <View style={[styles.optionIconContainer, { backgroundColor: 'rgba(127, 34, 206, 0.1)' }]}>
-              <FontAwesome name="magic" size={28} color={Colors.violet.primary} />
-            </View>
-            <View style={styles.optionTextContainer}>
-              <Text style={[styles.optionTitle, { color: textColor }]}>Photo + AI Identify</Text>
-              <Text style={[styles.optionDescription, { color: isDark ? '#999' : '#666' }]}>
-                Take a photo and let AI fill in the details
-              </Text>
-            </View>
-            <FontAwesome name="chevron-right" size={16} color="#999" />
-          </Pressable>
+            <Pressable
+              style={[styles.optionCard, { backgroundColor: isDark ? '#252525' : '#f8f8f8', borderColor: isDark ? '#333' : '#e0e0e0' }]}
+              onPress={() => handleSelectEntryMode('photo-ai')}>
+              <View style={[styles.optionIconContainer, { backgroundColor: 'rgba(127, 34, 206, 0.1)' }]}>
+                <FontAwesome name="magic" size={28} color={Colors.violet.primary} />
+              </View>
+              <View style={styles.optionTextContainer}>
+                <Text style={[styles.optionTitle, { color: textColor }]}>Photo + AI Identify</Text>
+                <Text style={[styles.optionDescription, { color: isDark ? '#999' : '#666' }]}>
+                  Take a photo and let AI fill in the details
+                </Text>
+              </View>
+              <FontAwesome name="chevron-right" size={16} color="#999" />
+            </Pressable>
 
-          <Pressable
-            style={[styles.optionCard, { backgroundColor: isDark ? '#1e1e1e' : '#f8f8f8', borderColor: isDark ? '#333' : '#e0e0e0' }]}
-            onPress={() => handleSelectEntryMode('manual')}>
-            <View style={[styles.optionIconContainer, { backgroundColor: 'rgba(127, 34, 206, 0.1)' }]}>
-              <FontAwesome name="pencil" size={28} color={Colors.violet.primary} />
-            </View>
-            <View style={styles.optionTextContainer}>
-              <Text style={[styles.optionTitle, { color: textColor }]}>Manual Entry</Text>
-              <Text style={[styles.optionDescription, { color: isDark ? '#999' : '#666' }]}>
-                Enter disc details yourself
-              </Text>
-            </View>
-            <FontAwesome name="chevron-right" size={16} color="#999" />
-          </Pressable>
+            <Pressable
+              style={[styles.optionCard, { backgroundColor: isDark ? '#252525' : '#f8f8f8', borderColor: isDark ? '#333' : '#e0e0e0' }]}
+              onPress={() => handleSelectEntryMode('manual')}>
+              <View style={[styles.optionIconContainer, { backgroundColor: 'rgba(127, 34, 206, 0.1)' }]}>
+                <FontAwesome name="pencil" size={28} color={Colors.violet.primary} />
+              </View>
+              <View style={styles.optionTextContainer}>
+                <Text style={[styles.optionTitle, { color: textColor }]}>Manual Entry</Text>
+                <Text style={[styles.optionDescription, { color: isDark ? '#999' : '#666' }]}>
+                  Enter disc details yourself
+                </Text>
+              </View>
+              <FontAwesome name="chevron-right" size={16} color="#999" />
+            </Pressable>
+
+            <Pressable
+              style={styles.optionsCancelButton}
+              onPress={() => router.back()}>
+              <Text style={styles.optionsCancelText}>Cancel</Text>
+            </Pressable>
+          </View>
         </View>
-      )}
+      </Modal>
 
       {/* AI Identification Result Modal */}
       <Modal
