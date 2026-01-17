@@ -12,7 +12,10 @@ export default function SelectEntryModeScreen() {
   const textColor = Colors[colorScheme ?? 'light'].text;
 
   const handleSelectMode = (mode: 'qr' | 'photo-ai' | 'manual') => {
-    router.replace({ pathname: '/add-disc', params: { mode } });
+    // Dismiss the modal first, then push to add-disc
+    // This ensures the back button works correctly
+    router.dismiss();
+    router.push({ pathname: '/add-disc', params: { mode } });
   };
 
   return (
