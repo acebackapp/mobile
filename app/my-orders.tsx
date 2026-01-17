@@ -108,7 +108,7 @@ export default function MyOrdersScreen() {
         }
       }
     } catch (error) {
-      logger.warn('Failed to load cached orders:', error);
+      logger.error('Failed to load cached orders:', error);
     }
     return false;
   };
@@ -121,7 +121,7 @@ export default function MyOrdersScreen() {
         JSON.stringify({ orders: ordersToCache, timestamp: Date.now() })
       );
     } catch (error) {
-      logger.warn('Failed to cache orders:', error);
+      logger.error('Failed to cache orders:', error);
     }
   };
 

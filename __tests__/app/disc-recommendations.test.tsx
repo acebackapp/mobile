@@ -21,7 +21,13 @@ jest.mock('expo-router', () => ({
 // Mock the hook
 const mockGetRecommendations = jest.fn();
 const mockReset = jest.fn();
-const mockHookState = {
+const mockHookState: {
+  getRecommendations: jest.Mock;
+  isLoading: boolean;
+  error: string | null;
+  result: typeof mockResult | null;
+  reset: jest.Mock;
+} = {
   getRecommendations: mockGetRecommendations,
   isLoading: false,
   error: null,

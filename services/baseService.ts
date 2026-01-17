@@ -10,7 +10,7 @@ const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 
 export interface ApiRequestOptions {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  body?: Record<string, unknown>;
+  body?: object;
   operation?: string;
   skipAuth?: boolean;
 }

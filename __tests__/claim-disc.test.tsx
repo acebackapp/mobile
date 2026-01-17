@@ -3,6 +3,11 @@ import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import ClaimDiscScreen from '../app/claim-disc';
 
+// Type for UNSAFE_root view instances
+interface ViewInstance {
+  props: { style?: Record<string, unknown> | Record<string, unknown>[] };
+}
+
 // Mock expo-router
 const mockRouterBack = jest.fn();
 const mockRouterReplace = jest.fn();
@@ -200,7 +205,7 @@ describe('ClaimDiscScreen', () => {
       const views = UNSAFE_root.findAllByType(require('react-native').View);
 
       // Header should have dark background (#000 or #1e1e1e)
-      const headerView = views.find((view) => {
+      const headerView = views.find((view: ViewInstance) => {
         const style = view.props.style;
         if (Array.isArray(style)) {
           return style.some(
@@ -235,7 +240,7 @@ describe('ClaimDiscScreen', () => {
       const views = UNSAFE_root.findAllByType(require('react-native').View);
 
       // Info card should have dark background
-      const infoCardView = views.find((view) => {
+      const infoCardView = views.find((view: ViewInstance) => {
         const style = view.props.style;
         if (Array.isArray(style)) {
           return style.some((s) => s?.backgroundColor === '#1e1e1e');
@@ -251,7 +256,7 @@ describe('ClaimDiscScreen', () => {
       const views = UNSAFE_root.findAllByType(require('react-native').View);
 
       // Info rows should have dark border color (#333)
-      const infoRowView = views.find((view) => {
+      const infoRowView = views.find((view: ViewInstance) => {
         const style = view.props.style;
         if (Array.isArray(style)) {
           return style.some((s) => s?.borderBottomColor === '#333');
@@ -267,7 +272,7 @@ describe('ClaimDiscScreen', () => {
       const views = UNSAFE_root.findAllByType(require('react-native').View);
 
       // Photo container should have dark background
-      const photoContainerView = views.find((view) => {
+      const photoContainerView = views.find((view: ViewInstance) => {
         const style = view.props.style;
         if (Array.isArray(style)) {
           return style.some(
@@ -314,7 +319,7 @@ describe('ClaimDiscScreen', () => {
       const views = UNSAFE_root.findAllByType(require('react-native').View);
 
       // Header should have light background (#fff)
-      const headerView = views.find((view) => {
+      const headerView = views.find((view: ViewInstance) => {
         const style = view.props.style;
         if (Array.isArray(style)) {
           return style.some((s) => s?.backgroundColor === '#fff');
@@ -344,7 +349,7 @@ describe('ClaimDiscScreen', () => {
       const views = UNSAFE_root.findAllByType(require('react-native').View);
 
       // Info card should have light background (#fff)
-      const infoCardView = views.find((view) => {
+      const infoCardView = views.find((view: ViewInstance) => {
         const style = view.props.style;
         if (Array.isArray(style)) {
           return style.some((s) => s?.backgroundColor === '#fff');
@@ -360,7 +365,7 @@ describe('ClaimDiscScreen', () => {
       const views = UNSAFE_root.findAllByType(require('react-native').View);
 
       // Info rows should have light border color (#f0f0f0 or #eee)
-      const infoRowView = views.find((view) => {
+      const infoRowView = views.find((view: ViewInstance) => {
         const style = view.props.style;
         if (Array.isArray(style)) {
           return style.some(

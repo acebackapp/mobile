@@ -495,11 +495,11 @@ describe('useDiscCatalogSearch', () => {
     });
 
     it('cancels previous request when new search starts', async () => {
-      let firstFetchController: AbortController | null = null;
+      let firstFetchController: { signal: AbortSignal } | null = null;
 
       (global.fetch as jest.Mock).mockImplementation((url, options) => {
         if (url.includes('first')) {
-          firstFetchController = { signal: options.signal } as AbortController;
+          firstFetchController = { signal: options.signal };
           return new Promise((_, reject) => {
             options.signal.addEventListener('abort', () => {
               const abortError = new Error('Aborted');
@@ -531,7 +531,7 @@ describe('useDiscCatalogSearch', () => {
       });
 
       // The abort should have been triggered
-      expect(firstFetchController?.signal?.aborted).toBe(true);
+      expect((firstFetchController as { signal: AbortSignal } | null)?.signal?.aborted).toBe(true);
     });
   });
 
@@ -587,10 +587,10 @@ describe('useDiscCatalogSearch', () => {
     });
 
     it('aborts in-flight request', async () => {
-      let fetchController: AbortController | null = null;
+      let fetchController: { signal: AbortSignal } | null = null;
 
       (global.fetch as jest.Mock).mockImplementation((_, options) => {
-        fetchController = { signal: options.signal } as AbortController;
+        fetchController = { signal: options.signal };
         return new Promise(() => {
           // Never resolve
         });
@@ -611,7 +611,7 @@ describe('useDiscCatalogSearch', () => {
         result.current.clearResults();
       });
 
-      expect(fetchController?.signal?.aborted).toBe(true);
+      expect((fetchController as { signal: AbortSignal } | null)?.signal?.aborted).toBe(true);
     });
   });
 

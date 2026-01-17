@@ -1554,7 +1554,7 @@ describe('AddDiscScreen', () => {
   // The QR validation logic is tested in the claiming tests below
   describe.skip('QR code scanning - invalid QR codes', () => {
     beforeEach(() => {
-      mockRequestPermission.mockResolvedValue({ granted: true });
+      mockRequestPermissionFn.mockResolvedValue({ granted: true });
       mockGetSession.mockResolvedValue({
         data: { session: { access_token: 'test-token' } },
       });
@@ -1573,7 +1573,7 @@ describe('AddDiscScreen', () => {
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
-        expect(mockRequestPermission).toHaveBeenCalled();
+        expect(mockRequestPermissionFn).toHaveBeenCalled();
       });
     });
 
@@ -1590,7 +1590,7 @@ describe('AddDiscScreen', () => {
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
-        expect(mockRequestPermission).toHaveBeenCalled();
+        expect(mockRequestPermissionFn).toHaveBeenCalled();
       });
     });
 
@@ -1608,7 +1608,7 @@ describe('AddDiscScreen', () => {
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
-        expect(mockRequestPermission).toHaveBeenCalled();
+        expect(mockRequestPermissionFn).toHaveBeenCalled();
       });
     });
 
@@ -1626,7 +1626,7 @@ describe('AddDiscScreen', () => {
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
-        expect(mockRequestPermission).toHaveBeenCalled();
+        expect(mockRequestPermissionFn).toHaveBeenCalled();
       });
     });
   });
@@ -1650,7 +1650,7 @@ describe('AddDiscScreen', () => {
   // Skip - requires barcode scan event simulation
   describe.skip('QR code claiming - generated status', () => {
     beforeEach(() => {
-      mockRequestPermission.mockResolvedValue({ granted: true });
+      mockRequestPermissionFn.mockResolvedValue({ granted: true });
       mockGetSession.mockResolvedValue({
         data: { session: { access_token: 'test-token' } },
       });
@@ -1682,7 +1682,7 @@ describe('AddDiscScreen', () => {
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
-        expect(mockRequestPermission).toHaveBeenCalled();
+        expect(mockRequestPermissionFn).toHaveBeenCalled();
       });
     });
 
@@ -1709,7 +1709,7 @@ describe('AddDiscScreen', () => {
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
-        expect(mockRequestPermission).toHaveBeenCalled();
+        expect(mockRequestPermissionFn).toHaveBeenCalled();
       });
     });
   });
@@ -1717,7 +1717,7 @@ describe('AddDiscScreen', () => {
   // Skip - requires barcode scan event simulation
   describe.skip('QR code - already assigned to current user', () => {
     beforeEach(() => {
-      mockRequestPermission.mockResolvedValue({ granted: true });
+      mockRequestPermissionFn.mockResolvedValue({ granted: true });
       mockGetSession.mockResolvedValue({
         data: { session: { access_token: 'test-token' } },
       });
@@ -1739,7 +1739,7 @@ describe('AddDiscScreen', () => {
       fireEvent.press(getByText('Scan QR Sticker'));
 
       await waitFor(() => {
-        expect(mockRequestPermission).toHaveBeenCalled();
+        expect(mockRequestPermissionFn).toHaveBeenCalled();
       });
     });
   });

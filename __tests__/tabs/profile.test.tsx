@@ -54,11 +54,11 @@ jest.mock('../../components/useColorScheme', () => ({
 
 // Mock supabase
 const mockSupabaseFrom = jest.fn();
-const mockGetSession = jest.fn(() => Promise.resolve({
+const mockGetSession = jest.fn<Promise<{ data: { session: { access_token: string } | null }; error: null }>, []>(() => Promise.resolve({
   data: { session: { access_token: 'test-token' } },
   error: null,
 }));
-const mockCreateSignedUrl = jest.fn(() => Promise.resolve({ data: null, error: null }));
+const mockCreateSignedUrl = jest.fn<Promise<{ data: { signedUrl: string } | null; error: Error | null }>, []>(() => Promise.resolve({ data: null, error: null }));
 jest.mock('../../lib/supabase', () => ({
   supabase: {
     from: (table: string) => mockSupabaseFrom(table),
