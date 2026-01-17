@@ -322,7 +322,7 @@ describe('createApiError', () => {
       json: async () => {
         throw new Error('Invalid JSON');
       },
-    } as Response;
+    } as unknown as Response;
 
     const error = await createApiError(response);
 

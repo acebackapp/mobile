@@ -15,16 +15,19 @@
  * ```
  */
 
-type LogContext = Record<string, unknown>;
+type LogContext = Record<string, unknown> | string | number | boolean | null | undefined;
 
 /**
  * Formats a log message with optional context
  */
 function formatMessage(message: string, context?: LogContext): string {
-  if (context && Object.keys(context).length > 0) {
+  if (context === undefined || context === null) {
+    return message;
+  }
+  if (typeof context === 'object') {
     return `${message} ${JSON.stringify(context, null, 2)}`;
   }
-  return message;
+  return `${message} ${context}`;
 }
 
 /**

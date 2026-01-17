@@ -193,7 +193,7 @@ describe('AuthContext', () => {
         expect(authContext).not.toBeNull();
       });
 
-      let result;
+      let result: { error?: Error | null } | undefined;
       await act(async () => {
         result = await authContext?.signIn('test@example.com', 'wrongpass');
       });
@@ -244,7 +244,7 @@ describe('AuthContext', () => {
         expect(authContext).not.toBeNull();
       });
 
-      let result;
+      let result: { error?: Error | null } | undefined;
       await act(async () => {
         result = await authContext?.signUp('test@example.com', 'password');
       });
@@ -384,7 +384,7 @@ describe('AuthContext', () => {
 
     it('updates session when auth state changes', async () => {
       const mockUser = { id: '123', email: 'new@example.com' };
-      const mockSession = { user: mockUser, access_token: 'token123' };
+      const mockSession = { user: mockUser, access_token: 'token123', refresh_token: 'refresh123', expires_in: 3600, token_type: 'bearer' } as Session;
       let authStateChangeCallback: (event: string, session: Session | null) => void;
 
       mockOnAuthStateChange.mockImplementation((callback) => {
@@ -443,7 +443,7 @@ describe('AuthContext', () => {
     it('sets Sentry user context when user signs in', async () => {
       const { setUserContext } = require('../../lib/sentry');
       const mockUser = { id: '123', email: 'test@example.com' };
-      const mockSession = { user: mockUser, access_token: 'token123' };
+      const mockSession = { user: mockUser, access_token: 'token123', refresh_token: 'refresh123', expires_in: 3600, token_type: 'bearer' } as Session;
       let authStateChangeCallback: (event: string, session: Session | null) => void;
 
       mockOnAuthStateChange.mockImplementation((callback) => {
@@ -1066,7 +1066,7 @@ describe('AuthContext', () => {
         expect(authContext).not.toBeNull();
       });
 
-      let result;
+      let result: { error?: Error | null } | undefined;
       await act(async () => {
         result = await authContext?.signInWithGoogle();
       });

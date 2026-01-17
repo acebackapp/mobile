@@ -31,9 +31,9 @@ describe('STORAGE_KEYS', () => {
   describe('key naming convention', () => {
     it('all keys follow @discr/ prefix convention', () => {
       Object.entries(STORAGE_KEYS).forEach(([key, value]) => {
-        expect(value).toMatch(
-          /^@discr\//,
-          `Key ${key} should start with @discr/`
+        // This will show both the key name and actual value on failure
+        expect({ key, value }).toEqual(
+          expect.objectContaining({ value: expect.stringMatching(/^@discr\//) })
         );
       });
     });
@@ -42,9 +42,9 @@ describe('STORAGE_KEYS', () => {
       Object.entries(STORAGE_KEYS).forEach(([key, value]) => {
         // Remove @discr/ prefix and check format
         const keyPart = value.replace('@discr/', '');
-        expect(keyPart).toMatch(
-          /^[a-z_]+$/,
-          `Value for ${key} should use lowercase and underscores`
+        // This will show both the key name and actual value on failure
+        expect({ key, keyPart }).toEqual(
+          expect.objectContaining({ keyPart: expect.stringMatching(/^[a-z_]+$/) })
         );
       });
     });
