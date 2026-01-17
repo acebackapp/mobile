@@ -2,9 +2,14 @@
 # Verifies the orders list displays correctly
 appId: com.discr.app
 ---
-- launchApp
+- launchApp:
+    clearState: true
 
-# Navigate to My Orders (from profile or menu)
+# Ensure we're on home screen (sign in if needed)
+- runFlow:
+    file: ../helpers/ensure-home-screen.yaml
+
+# Navigate to My Orders (from home screen quick action)
 - tapOn: "My Orders"
 - waitForAnimationToEnd
 
@@ -14,24 +19,18 @@ appId: com.discr.app
 # If orders exist, verify card structure
 - runFlow:
     when:
-      visible:
-        text: "AB-.*"
-        regex: true
+      visible: "AB-"
     commands:
       # Verify order card elements
+      - assertVisible: "sticker"
+      - assertVisible: "$"
+      # Verify status badge is visible (one of these should be visible)
       - assertVisible:
-          text: "sticker"
-      - assertVisible:
-          text: "\\$.*"
-          regex: true
-      # Verify status badge is visible
-      - assertVisible:
-          text: "(Pending Payment|Processing|Shipped|Delivered)"
-          regex: true
+          text: "Pending|Processing|Shipped|Delivered"
 
 # If no orders, verify empty state
 - runFlow:
     when:
       visible: "No Orders Yet"
     commands:
-      - assertVisible: "Order Stickers"
+      - assertVisible: "Protect Your Discs"

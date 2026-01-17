@@ -2,10 +2,15 @@
 # Verifies the 3-tier package selection UI works correctly
 appId: com.discr.app
 ---
-- launchApp
+- launchApp:
+    clearState: true
 
-# Navigate to Order Stickers
-- tapOn: "Order Stickers"
+# Ensure we're on home screen (sign in if needed)
+- runFlow:
+    file: ../helpers/ensure-home-screen.yaml
+
+# Navigate to Order Stickers (card shows "Protect Your Discs")
+- tapOn: "Protect Your Discs"
 - waitForAnimationToEnd
 
 # Verify all 3 packages are visible

@@ -4,9 +4,14 @@
 # Note: This test stops at opening Stripe (can't automate external browser)
 appId: com.discr.app
 ---
-- launchApp
+- launchApp:
+    clearState: true
 
-# Navigate to My Orders
+# Ensure we're on home screen (sign in if needed)
+- runFlow:
+    file: ../helpers/ensure-home-screen.yaml
+
+# Navigate to My Orders (from home screen quick action)
 - tapOn: "My Orders"
 - waitForAnimationToEnd
 
@@ -18,18 +23,11 @@ appId: com.discr.app
       # Verify Complete Payment button is visible
       - assertVisible: "Complete Payment"
 
-      # Verify button has credit card icon (button should contain icon)
-      - assertVisible:
-          text: "Complete Payment"
-
       # Tap Complete Payment
       - tapOn: "Complete Payment"
 
-      # Verify loading state appears
-      - assertVisible:
-          id: ".*loading.*"
-          regex: true
-          optional: true
+      # Brief wait for loading state (optional, may be too quick to catch)
+      - waitForAnimationToEnd
 
       # Note: At this point, Stripe checkout opens in browser
       # We can't automate the external browser, so test stops here

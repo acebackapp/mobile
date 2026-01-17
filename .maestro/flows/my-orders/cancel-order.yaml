@@ -3,9 +3,14 @@
 # Prerequisites: Must have a pending_payment order
 appId: com.discr.app
 ---
-- launchApp
+- launchApp:
+    clearState: true
 
-# Navigate to My Orders
+# Ensure we're on home screen (sign in if needed)
+- runFlow:
+    file: ../helpers/ensure-home-screen.yaml
+
+# Navigate to My Orders (from home screen quick action)
 - tapOn: "My Orders"
 - waitForAnimationToEnd
 

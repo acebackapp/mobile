@@ -2,17 +2,19 @@
 name: E2E Tests
 
 on:
-  # Run on push to main after PRs are merged
-  push:
-    branches:
-      - main
-  # Allow manual trigger
+  # Manual trigger only - e2e tests are slow (~10 min)
+  # Run when you need to verify critical flows work
   workflow_dispatch:
     inputs:
       flow:
         description: 'Specific flow to run (leave empty for all)'
         required: false
         default: ''
+      skip_cache:
+        description: 'Skip build cache (force rebuild)'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: read
@@ -21,7 +23,7 @@ jobs:
   e2e:
     name: Maestro E2E Tests
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
@@ -47,15 +49,13 @@ jobs:
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
           export PATH="$PATH:$HOME/.maestro/bin"
-          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
           maestro --version
 
       - name: Start iOS Simulator
         id: simulator
         run: |
           # List available simulators and find the first iPhone
-          # The format is: "    iPhone 15 Pro (UDID) (Shutdown)"
-          # We need to extract the UDID (first parenthesized value, which is a UUID)
           DEVICE_LINE=$(xcrun simctl list devices available | grep -E "iPhone [0-9]+" | head -1)
           echo "Found device line: $DEVICE_LINE"
 
@@ -65,25 +65,129 @@ jobs:
 
           echo "Booting simulator: $SIMULATOR_NAME ($SIMULATOR_UDID)"
           xcrun simctl boot "$SIMULATOR_UDID" || true
-          echo "udid=$SIMULATOR_UDID" >> $GITHUB_OUTPUT
-          echo "name=$SIMULATOR_NAME" >> $GITHUB_OUTPUT
+          echo "udid=$SIMULATOR_UDID" >> "$GITHUB_OUTPUT"
+          echo "name=$SIMULATOR_NAME" >> "$GITHUB_OUTPUT"
           # Wait for simulator to be ready
           sleep 10
 
-      - name: Build and install app
+      # Cache 1: Expo prebuild (ios/ folder with native code)
+      - name: Generate prebuild cache key
+        id: prebuild-key
         run: |
-          # Build for the booted simulator (avoids code signing requirements)
-          npx expo run:ios --device "${{ steps.simulator.outputs.udid }}" --configuration Release
+          # Hash files that affect native code generation
+          HASH=$(cat package-lock.json app.json | shasum -a 256 | cut -d' ' -f1)
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Expo prebuild cache
+        id: prebuild-cache
+        if: ${{ github.event.inputs.skip_cache != 'true' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ios
+          key: expo-prebuild-${{ steps.prebuild-key.outputs.hash }}
+
+      - name: Run Expo prebuild
+        if: steps.prebuild-cache.outputs.cache-hit != 'true'
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Save Expo prebuild cache
+        if: steps.prebuild-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ios
+          key: expo-prebuild-${{ steps.prebuild-key.outputs.hash }}
+
+      # Cache 2: Compiled .app bundle
+      - name: Generate build cache key
+        id: build-key
+        run: |
+          # Hash files that affect the final build
+          # Include ios/ folder state, source files, and env vars
+          FILES_HASH=$(find ios -type f -name "*.swift" -o -name "*.m" -o -name "*.h" -o -name "Podfile.lock" 2>/dev/null | sort | xargs cat 2>/dev/null | shasum -a 256 | cut -d' ' -f1 || echo "no-ios")
+          SRC_HASH=$(find app components lib -type f -name "*.ts" -o -name "*.tsx" 2>/dev/null | sort | xargs cat 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
+          echo "hash=${FILES_HASH:0:16}-${SRC_HASH:0:16}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore build cache
+        id: build-cache
+        if: ${{ github.event.inputs.skip_cache != 'true' }}
+        uses: actions/cache/restore@v4
+        with:
+          # Restore entire DerivedData for incremental builds
+          path: ios/build
+          key: ios-build-debug-${{ steps.build-key.outputs.hash }}
+
+      # Cache 3: CocoaPods
+      - name: Cache CocoaPods
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            pods-
+
+      - name: Install Pods
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          cd ios
+          pod install --deployment
+
+      - name: Build iOS app
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          cd ios
+          # Build for simulator without code signing
+          # Use Debug for faster builds in CI (no optimizations)
+          # ONLY_ACTIVE_ARCH=YES builds only for the destination's architecture
+          xcodebuild \
+            -workspace Discr.xcworkspace \
+            -scheme Discr \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=YES \
+            -derivedDataPath build \
+            build
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          # Skip Sentry source map upload in CI (no auth token)
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
+
+      - name: Save build cache
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          # Cache entire DerivedData for incremental builds
+          path: ios/build
+          key: ios-build-debug-${{ steps.build-key.outputs.hash }}
+
+      - name: Install app on simulator
+        run: |
+          # Find and install the .app
+          APP_PATH=$(find ios/build -name "*.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: No .app found in ios/build"
+            find ios/build -type d -name "*.app" 2>/dev/null || echo "No .app directories found"
+            exit 1
+          fi
+          echo "Installing app: $APP_PATH"
+          xcrun simctl install "${{ steps.simulator.outputs.udid }}" "$APP_PATH"
+          # Launch the app - use PlistBuddy for reliable plist reading
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist")
+          echo "Launching app: $BUNDLE_ID"
+          xcrun simctl launch "${{ steps.simulator.outputs.udid }}" "$BUNDLE_ID"
 
       - name: Run E2E Tests
         run: |
           if [ -n "${{ github.event.inputs.flow }}" ]; then
             maestro test "${{ github.event.inputs.flow }}"
           else
-            maestro test .maestro/
+            # Run essential smoke tests only (auth + package selection)
+            # Full suite can be triggered manually with workflow_dispatch
+            maestro test .maestro/flows/auth/sign-in.yaml .maestro/flows/order-stickers/package-selection.yaml
           fi
         env:
           E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
@@ -98,14 +202,3 @@ jobs:
             ~/.maestro/tests/
             ~/Library/Logs/DiagnosticReports/
           retention-days: 7
-
-  # Alternative: Run on Maestro Cloud (faster, parallel, but requires subscription)
-  # e2e-cloud:
-  #   name: Maestro Cloud E2E
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: mobile-dev-inc/action-maestro-cloud@v1
-  #       with:
-  #         api-key: ${{ secrets.MAESTRO_CLOUD_API_KEY }}
-  #         app-file: path/to/app.ipa

@@ -2,10 +2,15 @@
 # Verifies inline validation works on blur for all address fields
 appId: com.discr.app
 ---
-- launchApp
+- launchApp:
+    clearState: true
 
-# Navigate to Order Stickers
-- tapOn: "Order Stickers"
+# Ensure we're on home screen (sign in if needed)
+- runFlow:
+    file: ../helpers/ensure-home-screen.yaml
+
+# Navigate to Order Stickers (card shows "Protect Your Discs")
+- tapOn: "Protect Your Discs"
 - waitForAnimationToEnd
 
 # Select a package first
@@ -72,17 +77,14 @@ appId: com.discr.app
 - hideKeyboard
 - assertVisible: "Postal code is required"
 
-# Test invalid postal code
+# Test invalid postal code (optional - validation may vary)
 - tapOn:
     id: "postal-input"
 - inputText: "123"
 - hideKeyboard
-- assertVisible:
-    text: ".*invalid.*"
-    optional: true
 
 # Fill valid postal code
-- clearText
+- eraseText
 - inputText: "12345"
 - hideKeyboard
 - assertNotVisible: "Postal code is required"
