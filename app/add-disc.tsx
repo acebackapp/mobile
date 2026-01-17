@@ -146,13 +146,30 @@ export default function AddDiscScreen() {
     }
   }, [entryMode]);
 
+  /**
+   * Infer disc category from speed if not provided by API.
+   * Standard disc golf speed ranges:
+   * - Distance Driver: 11+
+   * - Fairway Driver: 7-10
+   * - Midrange: 4-6
+   * - Putter: 1-3
+   */
+  const inferCategoryFromSpeed = useCallback((speed: number | null): string | null => {
+    if (speed === null) return null;
+    if (speed >= 11) return 'Distance Driver';
+    if (speed >= 7) return 'Fairway Driver';
+    if (speed >= 4) return 'Midrange';
+    return 'Putter';
+  }, []);
+
   // istanbul ignore next -- Autocomplete selection callback tested via integration tests
   const handleDiscSelected = useCallback((disc: CatalogDisc) => {
     setMold(disc.mold);
     setManufacturer(disc.manufacturer);
 
-    // Auto-fill category if available
-    if (disc.category) setCategory(disc.category);
+    // Auto-fill category - use API value or infer from speed
+    const discCategory = disc.category || inferCategoryFromSpeed(disc.speed);
+    if (discCategory) setCategory(discCategory);
 
     // Clear plastic since manufacturer may have changed
     setPlastic('');
@@ -165,7 +182,7 @@ export default function AddDiscScreen() {
 
     // Clear any mold error since we selected a valid disc
     if (moldError) setMoldError('');
-  }, [moldError]);
+  }, [moldError, inferCategoryFromSpeed]);
 
   // istanbul ignore next -- QR scanning requires camera and device testing
   const startQrScanning = async () => {
@@ -502,13 +519,17 @@ export default function AddDiscScreen() {
 
     // If we have a catalog match, use its flight numbers (more reliable)
     if (catalog_match) {
-      if (catalog_match.category) setCategory(catalog_match.category);
+      // Use API category or infer from speed
+      const matchCategory = catalog_match.category || inferCategoryFromSpeed(catalog_match.speed);
+      if (matchCategory) setCategory(matchCategory);
       if (catalog_match.speed !== null) setSpeed(catalog_match.speed.toString());
       if (catalog_match.glide !== null) setGlide(catalog_match.glide.toString());
       if (catalog_match.turn !== null) setTurn(catalog_match.turn.toString());
       if (catalog_match.fade !== null) setFade(catalog_match.fade.toString());
     } else if (identification.flight_numbers) {
       // Fall back to AI-detected flight numbers
+      const inferredCategory = inferCategoryFromSpeed(identification.flight_numbers.speed);
+      if (inferredCategory) setCategory(inferredCategory);
       if (identification.flight_numbers.speed !== null) setSpeed(identification.flight_numbers.speed.toString());
       if (identification.flight_numbers.glide !== null) setGlide(identification.flight_numbers.glide.toString());
       if (identification.flight_numbers.turn !== null) setTurn(identification.flight_numbers.turn.toString());
