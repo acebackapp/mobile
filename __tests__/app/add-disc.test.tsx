@@ -9,6 +9,7 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({
     back: mockRouterBack,
   }),
+  useLocalSearchParams: () => ({ mode: 'manual' }),
 }));
 
 // Mock expo-image-picker
